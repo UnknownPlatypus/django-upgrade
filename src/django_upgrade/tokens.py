@@ -4,6 +4,7 @@ import ast
 import re
 from collections import defaultdict
 from typing import cast
+from typing import Sequence
 
 from tokenize_rt import NON_CODING_TOKENS
 from tokenize_rt import UNIMPORTANT_WS
@@ -720,3 +721,19 @@ def update_import_modules(
     for module, names in reversed(imports_to_add.items()):
         joined_names = ", ".join(sorted(names))
         insert(tokens, j, new_src=f"{indent}from {module} import {joined_names}\n")
+
+
+def delete_argument(
+    i: int,
+    tokens: list[Token],
+    func_args: Sequence[tuple[int, int]],
+) -> None:
+    if i == 0:
+        # delete leading whitespace before next token
+        end_idx, _ = func_args[i + 1]
+        while tokens[end_idx].name == "UNIMPORTANT_WS":
+            end_idx += 1
+
+        del tokens[func_args[i][0] : end_idx]
+    else:
+        del tokens[func_args[i - 1][1] : func_args[i][1]]
