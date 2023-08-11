@@ -47,6 +47,8 @@ class ContentType(int, enum.Enum):
 decorator_to_content_type = {
     "property": ContentType.CUSTOM_PROPERTY,
     "cached_property": ContentType.CUSTOM_PROPERTY,
+    "setter": ContentType.CUSTOM_PROPERTY,
+    "deleter": ContentType.CUSTOM_PROPERTY,
     "classmethod": ContentType.CUSTOM_CLASS_METHOD,
     "staticmethod": ContentType.CUSTOM_STATIC_METHOD,
 }
@@ -84,7 +86,7 @@ def get_element_type_with_lineno(
             return ContentType.CLEAN_METHOD, el_lineno
         else:
             if any(
-                (dec_name := getattr(decorator, "id", ""))
+                (dec_name := getattr(decorator, "id", getattr(decorator, "attr", "")))
                 in decorator_to_content_type.keys()
                 for decorator in element.decorator_list
             ):
