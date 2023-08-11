@@ -111,14 +111,23 @@ def visit_ClassDef(
     if (
         isinstance(parents[-1], ast.Module)
         and state.looks_like_models_file
-        and any(
-            is_name_attr(
-                base_node,
-                state.from_imports,
-                ("models",),
-                ("Model",),
+        and (
+            any(  # class inherit from models.Model
+                is_name_attr(
+                    base_node,
+                    state.from_imports,
+                    ("models",),
+                    ("Model",),
+                )
+                for base_node in node.bases
             )
-            for base_node in node.bases
+            or any(  # class contain a django model field declaration
+                isinstance(body_node, ast.Assign)
+                and isinstance(body_node.value, ast.Call)
+                and isinstance(body_node.value.func, ast.Attribute)
+                and getattr(body_node.value.func.value, "id", "") == "models"
+                for body_node in node.body
+            )
         )
     ):
         element_types: list[ContentType] = []
