@@ -25,6 +25,32 @@ def test_params_generated_from_func():
     )
 
 
+def test_empty_ids():
+    check_noop(
+        """\
+        import datetime as dt
+        @pytest.mark.parametrize(
+            "due_by, expected",
+            [
+                # Week day
+                [
+                    dt.date(2022, 5, 1),
+                    [False, True],
+                ],
+                [
+                    dt.date(2022, 5, 1),
+                    [True, False],
+                ],
+            ],
+            ids=[],
+        )
+        def test_check_if_responder_could_be_available(due_by, expected):
+            pass
+        """,
+        settings,
+    )
+
+
 def test_rewrite_tuple():
     check_transformed(
         """\
@@ -113,6 +139,37 @@ def test_rewrite_list():
     )
 
 
+def test_rewrite_weird_list():
+    check_transformed(
+        """\
+        import datetime as dt
+        @pytest.mark.parametrize(
+            "due_by, expected",
+            [
+                [[1,2,], True],
+            ],
+            ids=[
+                "Thing",
+            ],
+        )
+        def test_check_if_responder_could_be_available(due_by, expected):
+            pass
+        """,
+        """\
+        import datetime as dt
+        @pytest.mark.parametrize(
+            "due_by, expected",
+            [
+                pytest.param([1,2,], True, id="Thing"),
+            ],
+        )
+        def test_check_if_responder_could_be_available(due_by, expected):
+            pass
+        """,
+        settings,
+    )
+
+
 def test_rewrite_multiline():
     check_transformed(
         """\
@@ -123,16 +180,26 @@ def test_rewrite_multiline():
                 # Week day
                 [
                     dt.date(2022, 5, 1),
-                    False,
+                    [False, True],
                 ],
                 [
                     dt.date(2022, 5, 1),
-                    True,
+                    [True, False]
+                ],
+                [
+                    dt.date(2022, 5, 1),
+                    [False, True], # Comment
+                ],
+                [
+                    dt.date(2022, 5, 1),
+                    [False, True] # Comment
                 ],
             ],
             ids=[
                 "Weekday - 7 minutes",
                 "Weekday - 3 minutes",
+                "Weekday - 4 minutes",
+                "Weekday - 5 minutes",
             ],
         )
         def test_check_if_responder_could_be_available(due_by, expected):
@@ -146,12 +213,20 @@ def test_rewrite_multiline():
                 # Week day
                 pytest.param(
                     dt.date(2022, 5, 1),
-                    False,
+                    [False, True],
                 id="Weekday - 7 minutes"),
                 pytest.param(
                     dt.date(2022, 5, 1),
-                    True,
-                id="Weekday - 3 minutes"),
+                    [True, False]
+                , id="Weekday - 3 minutes"),
+                pytest.param(
+                    dt.date(2022, 5, 1),
+                    [False, True], # Comment
+                id="Weekday - 4 minutes"),
+                pytest.param(
+                    dt.date(2022, 5, 1),
+                    [False, True] # Comment
+                , id="Weekday - 5 minutes"),
             ],
         )
         def test_check_if_responder_could_be_available(due_by, expected):
@@ -161,7 +236,7 @@ def test_rewrite_multiline():
     )
 
 
-def test_rewrite_single_arg():
+def test_rewrite_single_arg_first_arg_str():
     check_transformed(
         """\
         @pytest.mark.parametrize(
@@ -182,8 +257,78 @@ def test_rewrite_single_arg():
         @pytest.mark.parametrize(
             "events_data",
             [
-                pytest.param(1, 2, id="2 events"),
-                pytest.param(id="No events"),
+                pytest.param([1, 2], id="2 events"),
+                pytest.param([], id="No events"),
+            ],
+        )
+        def test_thing(events_data, expected):
+            pass
+        """,
+        settings,
+    )
+
+
+def test_rewrite_single_arg_first_arg_str_multiline():
+    check_transformed(
+        """\
+        @pytest.mark.parametrize(
+            "events_data",
+            [
+                [
+                    1,
+                    2,
+                ],
+                [],
+            ],
+            ids=[
+                "2 events",
+                "No events",
+            ],
+        )
+        def test_thing(events_data, expected):
+            pass
+        """,
+        """\
+        @pytest.mark.parametrize(
+            "events_data",
+            [
+                pytest.param([
+                    1,
+                    2,
+                ], id="2 events"),
+                pytest.param([], id="No events"),
+            ],
+        )
+        def test_thing(events_data, expected):
+            pass
+        """,
+        settings,
+    )
+
+
+def test_rewrite_single_arg_first_arg_sequence_str():
+    check_transformed(
+        """\
+        @pytest.mark.parametrize(
+            ("events_data",),
+            [
+                [1, 2],
+                [],
+            ],
+            ids=[
+                "2 events",
+                "No events",
+            ],
+        )
+        def test_thing(events_data, expected):
+            pass
+        """,
+        """\
+        @pytest.mark.parametrize(
+            ("events_data",),
+            [
+                pytest.param([1, 2], id="2 events"),
+                pytest.param([], id="No events"),
             ],
         )
         def test_thing(events_data, expected):

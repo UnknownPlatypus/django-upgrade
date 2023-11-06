@@ -131,6 +131,13 @@ def find_first_token_at_line(
     return i
 
 
+def reverse_consume_non_semantic_elements(tokens: list[Token], i: int) -> int:
+    """Rewind past any non-semantic tokens (PHYSICAL_NEWLINE, COMMENTS, ...)"""
+    while tokens[i - 1].name in NON_CODING_TOKENS:
+        i -= 1
+    return i
+
+
 def extract_indent(tokens: list[Token], i: int) -> tuple[int, str]:
     """
     If the previous token is and indent, return its position and the
