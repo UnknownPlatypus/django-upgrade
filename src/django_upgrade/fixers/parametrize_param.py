@@ -1,6 +1,5 @@
 """
-Add the 'length' argument to get_random_string():
-https://docs.djangoproject.com/en/3.1/releases/3.1/#features-deprecated-in-3-1
+Use multiple `pytest.param(..., id=...)` over `ids=[...]`
 """
 from __future__ import annotations
 
