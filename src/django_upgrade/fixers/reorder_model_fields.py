@@ -73,6 +73,30 @@ _decorator_to_content_type = {
 _PHYSICAL_NEWLINE_TOKEN = Token(name=PHYSICAL_NEWLINE, src="\n")
 
 
+def _looks_like_manager_instanciation(element: ast.AST) -> bool:
+    return isinstance(element, ast.Call) and (
+        (  # my_manager = MyManager()
+            isinstance(element.func, ast.Name) and "Manager" in element.func.id
+        )
+        or (
+            isinstance(element.func, ast.Attribute)
+            and (
+                (  # my_manager = MyQueryset.as_manager()
+                    element.func.attr == "as_manager"
+                )
+                or ("Manager" in element.func.attr)  # my_manager = models.Manager()
+            )
+        )
+        or (  # my_manager = CustomManager.from_queryset(CustomQuerySet)()
+            not element.args
+            and not element.keywords
+            and isinstance(element.func, ast.Call)
+            and isinstance(element.func.func, ast.Attribute)
+            and element.func.func.attr == "from_queryset"
+        )
+    )
+
+
 def get_element_type_with_lineno(
     element: ast.AST,
 ) -> tuple[ContentType, int]:
@@ -82,8 +106,8 @@ def get_element_type_with_lineno(
         and isinstance(target, ast.Name)
     ):
         if target.id == "objects" or (
-            isinstance(element.value, ast.Call)
-            and "Manager" in getattr(element.value.func, "id", "")
+            element.value is not None
+            and _looks_like_manager_instanciation(element.value)
         ):
             # Because Manager definition order in the class matter, it is not a
             # safe idea to try distinguishing the `object` manager from other ones.

@@ -99,8 +99,15 @@ def test_annotated_fields_and_managers():
 
         class Article(models.Model):
             author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
-            objects: int = models.Manager()
-            truc = CustomManager()
+
+            people = models.Manager()
+            people2 = PersonQuerySet.as_manager()
+            people3 = foo.PersonQuerySet.as_manager()
+            other_module_manager = foo.MyManager()
+            from_q_manager = CustomManager.from_queryset(CustomQuerySet)()
+            objects: PollManager = PollManager()
+            dahl_objects = DahlBookManager()
+
             author_name2: str = models.CharField(max_length=100, verbose_name=_("Nom"))
         """,
         """\
@@ -111,8 +118,13 @@ def test_annotated_fields_and_managers():
 
             author_name2: str = models.CharField(max_length=100, verbose_name=_("Nom"))
 
-            objects: int = models.Manager()
-            truc = CustomManager()
+            people = models.Manager()
+            people2 = PersonQuerySet.as_manager()
+            people3 = foo.PersonQuerySet.as_manager()
+            other_module_manager = foo.MyManager()
+            from_q_manager = CustomManager.from_queryset(CustomQuerySet)()
+            objects: PollManager = PollManager()
+            dahl_objects = DahlBookManager()
         """,
         settings,
         filename="blog/models/article.py",
