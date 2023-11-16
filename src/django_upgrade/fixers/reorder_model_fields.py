@@ -11,6 +11,7 @@ from tokenize_rt import Token
 
 from django_upgrade.ast import ast_start_offset
 from django_upgrade.ast import is_name_attr
+from django_upgrade.ast import is_single_target_assign
 from django_upgrade.data import Fixer
 from django_upgrade.data import State
 from django_upgrade.data import TokenFunc
@@ -76,13 +77,9 @@ def get_element_type_with_lineno(
     element: ast.AST,
 ) -> tuple[ContentType, int]:
     if (
-        isinstance(element, ast.Assign)
-        and len(element.targets) == 1
-        and isinstance((target := element.targets[0]), ast.Name)
-    ) or (
-        isinstance(element, ast.AnnAssign)
-        and isinstance((target := element.target), ast.Name)
-        and element.value is not None
+        isinstance(element, (ast.Assign, ast.AnnAssign))
+        and (target := is_single_target_assign(element))
+        and isinstance(target, ast.Name)
     ):
         if target.id == "objects" or (
             isinstance(element.value, ast.Call)

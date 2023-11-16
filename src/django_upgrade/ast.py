@@ -69,3 +69,13 @@ def is_name_attr(
         and node.value.id in mods
         and node.attr in names
     )
+
+
+def is_single_target_assign(node: ast.Assign | ast.AnnAssign) -> ast.AST | None:
+    if isinstance(node, ast.Assign) and len(node.targets) == 1:
+        return node.targets[0]
+
+    if isinstance(node, ast.AnnAssign) and node.value is not None:
+        return node.target
+
+    return None
