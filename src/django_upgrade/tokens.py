@@ -96,10 +96,7 @@ def find_last_token(tokens: list[Token], i: int, *, node: ast.AST) -> int:
 
 
 def reverse_consume_non_semantic_elements(tokens: list[Token], i: int) -> int:
-    """
-    Rewind past any non-semantic tokens to bind preceding
-    non-semantic tokens (PHYSICAL_NEWLINE, COMMENTS, ..) with a chunk of lines.
-    """
+    """Rewind past any non-semantic tokens (PHYSICAL_NEWLINE, COMMENTS, ...)"""
     while tokens[i - 1].name in NON_CODING_TOKENS:
         i -= 1
     return i
@@ -117,15 +114,6 @@ def find_first_token_at_line(
     while tokens[i].line is None or tokens[i].line < line:
         i += 1
     return i
-
-
-def find_last_token_at_line(tokens: list[Token], i: int, *, line: int) -> int:
-    """
-    Find the last token corresponding to the given line number.
-    """
-    while tokens[i].line is None or tokens[i].line <= line:
-        i += 1
-    return i - 1
 
 
 def extract_indent(tokens: list[Token], i: int) -> tuple[int, str]:

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from django_upgrade.data import Settings
 from tests.fixers.tools import check_noop
 from tests.fixers.tools import check_transformed
@@ -9,13 +7,14 @@ from tests.fixers.tools import check_transformed
 settings = Settings(target_version=(4, 2))
 
 
-def test_noop_wrong_filemname():
+def test_noop_wrong_filename():
     check_noop(
         """\
         from django.db import models
 
         class Article(models.Model):
-            objects = models.Manager()
+            objects: int = models.Manager()
+            truc = fkjehgfdManager()
             author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
         """,
         settings,
@@ -28,7 +27,8 @@ def test_noop_ordered_class():
         from django.db import models
 
         class Article(models.Model):
-            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+            author_name = models.CharField(max_length=100, verbose_name=_("Name"))
+            title = models.CharField(max_length=100, verbose_name=_("Title"))
 
             objects = models.Manager()
             validated = ValidatedCommentManager()
@@ -45,6 +45,15 @@ def test_noop_ordered_class():
 
             def save(self, *args, **kwargs):
                 super().save(*args, **kwargs)
+
+            def asave(self, *args, **kwargs):
+                pass
+
+            def delete(self, *args, **kwargs):
+                pass
+
+            def adelete(self, *args, **kwargs):
+                pass
 
             def get_absolute_url(self) -> str:
                 return ""
@@ -66,6 +75,10 @@ def test_noop_ordered_class():
             def my_method(self) -> str:
                 return ""
 
+            @random_decorator
+            def my_decorated_method(self) -> str:
+                return ""
+
             @classmethod
             def my_class_method(cls) -> str:
                 return ""
@@ -73,6 +86,33 @@ def test_noop_ordered_class():
             @staticmethod
             def my_static_method() -> str:
                 return ""
+        """,
+        settings,
+        filename="blog/models/article.py",
+    )
+
+
+def test_annotated_fields_and_managers():
+    check_transformed(
+        """\
+        from django.db import models
+
+        class Article(models.Model):
+            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+            objects: int = models.Manager()
+            truc = CustomManager()
+            author_name2: str = models.CharField(max_length=100, verbose_name=_("Nom"))
+        """,
+        """\
+        from django.db import models
+
+        class Article(models.Model):
+            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+
+            author_name2: str = models.CharField(max_length=100, verbose_name=_("Nom"))
+
+            objects: int = models.Manager()
+            truc = CustomManager()
         """,
         settings,
         filename="blog/models/article.py",
@@ -132,7 +172,15 @@ def test_properties():
 
             @property
             def my_property(self) -> str:
-                return ""
+                return self._prop
+
+            @my_property.setter
+            def my_property(self, value) -> str:
+                self._prop = value
+
+            @my_property.deleter
+            def my_property(self, value) -> str:
+                del self._prop
 
             sub_title = models.CharField(max_length=255, verbose_name="H1")
 
@@ -150,7 +198,15 @@ def test_properties():
 
             @property
             def my_property(self) -> str:
-                return ""
+                return self._prop
+
+            @my_property.setter
+            def my_property(self, value) -> str:
+                self._prop = value
+
+            @my_property.deleter
+            def my_property(self, value) -> str:
+                del self._prop
 
             @cached_property
             def my_cached_property(self) -> str:
@@ -446,8 +502,37 @@ def test_trailing_newlines():
     )
 
 
-@pytest.mark.skip("Docstring as a comment is not supported.")
-def test_docstring_as_comment_fail():
+def test_bare_annotations_untouched():
+    check_transformed(
+        """\
+        from django.db import models
+
+        class Article(models.Model):
+            a: int
+
+            objects: int = models.Manager()
+            truc = CustomManager()
+            comment_set: QuerySet[Comment]
+
+            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+        """,
+        """\
+        from django.db import models
+
+        class Article(models.Model):
+            a: int
+            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+
+            objects: int = models.Manager()
+            truc = CustomManager()
+            comment_set: QuerySet[Comment]
+        """,
+        settings,
+        filename="blog/models/article.py",
+    )
+
+
+def test_docstring_as_comment_not_supported():
     check_transformed(
         """\
         from django.db import models
@@ -463,11 +548,12 @@ def test_docstring_as_comment_fail():
         from django.db import models
 
         class MyModel(models.Model):
-            '''French fields'''
             title = models.CharField(max_length=255, verbose_name="H1")
 
             class Meta:
                 abstract = True
+
+            '''Specific fields'''
         """,
         settings,
         filename="blog/models/article.py",
@@ -479,28 +565,14 @@ def test_full_transform():
         """\
         from __future__ import annotations
 
-        import datetime as dt
-        from urllib.parse import urljoin
-
-        import requests
-        from django.conf import settings
         from django.db import models
         from django.db.models import Prefetch
-        from django.db.models.signals import post_save
-        from django.dispatch import receiver
-        from django.urls import reverse
-        from django.utils import timezone
-        from django.utils.html import strip_tags
-        from django.utils.text import Truncator, slugify
-        from django.utils.translation import gettext_lazy as _
-
 
         class EntryStatus(models.TextChoices):
             PUBLISHED = "published"
             SCHEDULED = "scheduled"
             HIDDEN = "hidden"
             SCRATCH = "scratch"
-
 
         class ArticleQuerySet(models.QuerySet):
             def with_validated_comments(self):
@@ -511,13 +583,10 @@ def test_full_transform():
                     ),
                 )
 
-
         ArticleManager = models.Manager.from_queryset(ArticleQuerySet)
-
 
         class Article(PlusPlusMixin, models.Model, metaclass=PlusPlusMetaClass):
             '''docstring'''
-            a: int
             title = models.CharField(max_length=255, verbose_name="H1")
             meta_title = models.CharField(
                 max_length=255,
@@ -577,28 +646,14 @@ def test_full_transform():
         """\
         from __future__ import annotations
 
-        import datetime as dt
-        from urllib.parse import urljoin
-
-        import requests
-        from django.conf import settings
         from django.db import models
         from django.db.models import Prefetch
-        from django.db.models.signals import post_save
-        from django.dispatch import receiver
-        from django.urls import reverse
-        from django.utils import timezone
-        from django.utils.html import strip_tags
-        from django.utils.text import Truncator, slugify
-        from django.utils.translation import gettext_lazy as _
-
 
         class EntryStatus(models.TextChoices):
             PUBLISHED = "published"
             SCHEDULED = "scheduled"
             HIDDEN = "hidden"
             SCRATCH = "scratch"
-
 
         class ArticleQuerySet(models.QuerySet):
             def with_validated_comments(self):
@@ -609,13 +664,10 @@ def test_full_transform():
                     ),
                 )
 
-
         ArticleManager = models.Manager.from_queryset(ArticleQuerySet)
-
 
         class Article(PlusPlusMixin, models.Model, metaclass=PlusPlusMetaClass):
             '''docstring'''
-            a: int
             title = models.CharField(max_length=255, verbose_name="H1")
             meta_title = models.CharField(
                 max_length=255,
