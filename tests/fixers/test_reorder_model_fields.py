@@ -544,6 +544,31 @@ def test_bare_annotations_untouched():
     )
 
 
+def test_weird_repr():
+    check_transformed(
+        """\
+        from django.db import models
+
+        class Article(models.Model):
+            objects = models.Manager()
+            __repr__ = my_custom_repr()
+            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+        """,
+        """\
+        from django.db import models
+
+        class Article(models.Model):
+            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+
+            objects = models.Manager()
+
+            __repr__ = my_custom_repr()
+        """,
+        settings,
+        filename="blog/models/article.py",
+    )
+
+
 def test_docstring_as_comment_not_supported():
     check_transformed(
         """\

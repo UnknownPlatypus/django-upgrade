@@ -15,9 +15,9 @@ from django_upgrade.ast import is_single_target_assign
 from django_upgrade.data import Fixer
 from django_upgrade.data import State
 from django_upgrade.data import TokenFunc
+from django_upgrade.tokens import PHYSICAL_NEWLINE
 from django_upgrade.tokens import consume
 from django_upgrade.tokens import find_first_token_at_line
-from django_upgrade.tokens import PHYSICAL_NEWLINE
 from django_upgrade.tokens import reverse_consume_non_semantic_elements
 
 fixer = Fixer(
@@ -112,7 +112,11 @@ def get_element_type_with_lineno(
             # Because Manager definition order in the class matter, it is not a
             # safe idea to try distinguishing the `object` manager from other ones.
             # https://docs.djangoproject.com/fr/4.2/topics/db/managers/#default-managers
+            # So we juste flag them all here, that way the order will be preserved.
             return ContentType.MANAGER_DECLARATION, element.lineno
+        if content_type := _function_name_to_content_type.get(target.id):
+            # Handle case like `__repr__ = my_custom_repr()`
+            return content_type, element.lineno
         return ContentType.FIELD_DECLARATION, element.lineno
 
     if isinstance(element, ast.ClassDef) and element.name == "Meta":
