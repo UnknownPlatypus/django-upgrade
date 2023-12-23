@@ -393,6 +393,36 @@ def replace_argument_names(
                 raise AssertionError(f"{keyword.arg} argument not found")
 
 
+def remove_arg(
+    tokens: list[Token],
+    *,
+    func_args: list[tuple[int, int]],
+    arg_idx_to_remove: int,
+) -> None:
+    nb_args = len(func_args)
+    start_idx, end_idx = func_args[arg_idx_to_remove]
+
+    if nb_args == 1:
+        # Argument is the only node.
+        del tokens[start_idx:end_idx]
+
+    elif arg_idx_to_remove + 1 != nb_args:
+        # Argument is not the last node.
+        # Delete from the argument start until the next comma.
+        end_idx = find(tokens, end_idx, name=OP, src=",")
+        end_idx = consume(tokens, end_idx, name=UNIMPORTANT_WS)
+        end_idx = consume(tokens, end_idx, name=COMMENT)
+        end_idx += 1
+        del tokens[start_idx:end_idx]
+
+    elif arg_idx_to_remove + 1 == nb_args:
+        # Argument is the last node.
+        # Delete from the previous comma to the argument end.
+        _, previous_end_idx = func_args[arg_idx_to_remove - 1]
+        start_idx = find(tokens, previous_end_idx, name=OP, src=",")
+        del tokens[start_idx:end_idx]
+
+
 str_repr_single_to_double = str.maketrans(
     {
         "'": '"',
