@@ -58,13 +58,27 @@ def test_transform_unnecessary_localtime_default_multiline():
     )
 
 
-def test_transform_conplicated_localtime():
+def test_transform_localdate_instead_of_localtime():
     check_transformed(
         """\
-        timezone.make_aware(dt.datetime.now())
+        timezone.localtime(timezone.now()).date()
+        timezone.localtime().date()
         """,
         """\
-        timezone.localtime()
+        timezone.localdate()
+        timezone.localdate()
+        """,
+        settings,
+    )
+
+
+def test_transform_localdate_instead_of_localtime_with_date():
+    check_transformed(
+        """\
+        timezone.localtime(timezone.make_aware(dt.datetime(2022, 1, 1))).date()
+        """,
+        """\
+        timezone.localdate(timezone.make_aware(dt.datetime(2022, 1, 1)))
         """,
         settings,
     )
