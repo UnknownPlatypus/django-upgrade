@@ -125,10 +125,7 @@ def visit(
         if (
             isinstance(node, ast.ImportFrom)
             and node.level == 0
-            and (
-                node.module is not None
-                and (node.module.startswith("django.") or node.module == "django")
-            )
+            and node.module is not None
         ):
             state.from_imports[node.module].update(
                 name.name
