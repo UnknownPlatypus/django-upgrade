@@ -10,8 +10,12 @@ settings = Settings(target_version=(5, 0))
 def test_noop():
     check_noop(
         """\
+        from django.utils import timezone
+        import datetime as dt
 
-
+        timezone.localtime(timezone.make_aware(dt.datetime(2022, 1, 1)))
+        my_date = timezone.make_aware(dt.datetime(2022, 1, 1))
+        timezone.localdate(my_date)
         """,
         settings,
     )
@@ -20,9 +24,13 @@ def test_noop():
 def test_transform_unnecessary_localtime_default():
     check_transformed(
         """\
+        from django.utils import timezone
+
         timezone.localtime(timezone.now())
         """,
         """\
+        from django.utils import timezone
+
         timezone.localtime()
         """,
         settings,
@@ -32,10 +40,14 @@ def test_transform_unnecessary_localtime_default():
 def test_transform_unnecessary_localdate_default():
     check_transformed(
         """\
+        from django.utils import timezone
+
         timezone.localdate(timezone.now())
         """,
         """\
-        timezone.localtime()
+        from django.utils import timezone
+
+        timezone.localdate()
         """,
         settings,
     )
@@ -44,6 +56,8 @@ def test_transform_unnecessary_localdate_default():
 def test_transform_unnecessary_localtime_default_multiline():
     check_transformed(
         """\
+        from django.utils import timezone
+
         timezone.localtime(
             timezone.now()
         )
@@ -51,6 +65,8 @@ def test_transform_unnecessary_localtime_default_multiline():
         timezone.now())
         """,
         """\
+        from django.utils import timezone
+
         timezone.localtime()
         timezone.localdate()
         """,
@@ -61,10 +77,14 @@ def test_transform_unnecessary_localtime_default_multiline():
 def test_transform_localdate_instead_of_localtime():
     check_transformed(
         """\
+        from django.utils import timezone
+
         timezone.localtime(timezone.now()).date()
         timezone.localtime().date()
         """,
         """\
+        from django.utils import timezone
+
         timezone.localdate()
         timezone.localdate()
         """,
@@ -75,10 +95,52 @@ def test_transform_localdate_instead_of_localtime():
 def test_transform_localdate_instead_of_localtime_with_date():
     check_transformed(
         """\
+        from django.utils import timezone
+        import datetime as dt
+
         timezone.localtime(timezone.make_aware(dt.datetime(2022, 1, 1))).date()
         """,
         """\
+        from django.utils import timezone
+        import datetime as dt
+
         timezone.localdate(timezone.make_aware(dt.datetime(2022, 1, 1)))
+        """,
+        settings,
+    )
+
+
+def test_transform_overcomplicated_localtime_dt_datetime():
+    check_transformed(
+        """\
+        from django.utils import timezone
+        import datetime as dt
+
+        timezone.make_aware(dt.datetime.now())
+        """,
+        """\
+        from django.utils import timezone
+        import datetime as dt
+
+        timezone.localtime()
+        """,
+        settings,
+    )
+
+
+def test_transform_overcomplicated_localtime_datetime():
+    check_transformed(
+        """\
+        from django.utils import timezone
+        from datetime import datetime
+
+        timezone.make_aware(datetime.now())
+        """,
+        """\
+        from django.utils import timezone
+        from datetime import datetime
+
+        timezone.localtime()
         """,
         settings,
     )

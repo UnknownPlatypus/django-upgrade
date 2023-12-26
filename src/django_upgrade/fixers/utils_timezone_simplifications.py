@@ -62,6 +62,29 @@ def visit_Call(
             )
             yield ast_start_offset(node), partial(remove_attr_call)
 
+    elif (
+        is_name_attr(
+            node=node.func,
+            imports=state.from_imports,
+            mods=("timezone",),
+            names={"make_aware"},
+        )
+        and len(node.args) == 1
+        and isinstance((inner_node := node.args[0]), ast.Call)
+        and isinstance(inner_node.func, ast.Attribute)
+        and inner_node.func.attr == "now"
+        and is_name_attr(
+            node=inner_node.func.value,
+            imports=state.from_imports,
+            mods=("dt", "datetime"),
+            names={"datetime"},
+        )
+    ):
+        yield ast_start_offset(node), partial(remove_call_args)
+        yield ast_start_offset(node), partial(
+            find_and_replace_name, name="make_aware", new="localtime"
+        )
+
 
 def remove_call_args(tokens: list[Token], i: int) -> None:
     open_idx = find(tokens, i, name=OP, src="(")
