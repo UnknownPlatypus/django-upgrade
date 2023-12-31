@@ -18,13 +18,10 @@ from django_upgrade.data import Fixer
 from django_upgrade.data import State
 from django_upgrade.data import TokenFunc
 from django_upgrade.tokens import CODE
-from django_upgrade.tokens import COMMENT
-from django_upgrade.tokens import INDENT
-from django_upgrade.tokens import OP
-from django_upgrade.tokens import consume
 from django_upgrade.tokens import find
+from django_upgrade.tokens import OP
 from django_upgrade.tokens import parse_call_args
-from django_upgrade.tokens import reverse_consume
+from django_upgrade.tokens import remove_arg
 
 fixer = Fixer(
     __name__,
@@ -73,18 +70,6 @@ def remove_providing_args(tokens: list[Token], i: int, *, node: ast.Call) -> Non
     else:
         for n, keyword in enumerate(node.keywords):
             if keyword.arg == "providing_args":
-                start_idx, end_idx = func_args[n]
-
-                start_idx = reverse_consume(tokens, start_idx, name=UNIMPORTANT_WS)
-                start_idx = reverse_consume(tokens, start_idx, name=INDENT)
-                if n > 0:
-                    start_idx = reverse_consume(tokens, start_idx, name=OP, src=",")
-
-                if n < len(node.keywords) - 1:
-                    end_idx = consume(tokens, end_idx, name=UNIMPORTANT_WS)
-                    end_idx = consume(tokens, end_idx, name=OP, src=",")
-                    end_idx = consume(tokens, end_idx, name=UNIMPORTANT_WS)
-                    end_idx = consume(tokens, end_idx, name=COMMENT)
-                    end_idx += 1
-
-                del tokens[start_idx:end_idx]
+                remove_arg(
+                    tokens, func_args=func_args, arg_idx_to_remove=len(node.args) + n
+                )
