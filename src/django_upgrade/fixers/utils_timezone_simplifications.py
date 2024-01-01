@@ -12,9 +12,9 @@ from django_upgrade.ast import is_name_attr
 from django_upgrade.data import Fixer
 from django_upgrade.data import State
 from django_upgrade.data import TokenFunc
+from django_upgrade.tokens import OP
 from django_upgrade.tokens import find
 from django_upgrade.tokens import find_and_replace_name
-from django_upgrade.tokens import OP
 from django_upgrade.tokens import parse_call_args
 
 fixer = Fixer(
@@ -32,7 +32,7 @@ def visit_Call(
     if is_name_attr(
         node=node.func,
         imports=state.from_imports,
-        mods=("timezone",),
+        mods=("timezone", "django.utils.timezone"),
         names={"localdate", "localtime"},
     ):
         # `timezone.localdate(timezone.now())` -> `timezone.localdate()`
@@ -43,7 +43,7 @@ def visit_Call(
             and is_name_attr(
                 node=node.args[0].func,
                 imports=state.from_imports,
-                mods=("timezone",),
+                mods=("timezone", "django.utils.timezone"),
                 names={"now"},
             )
         ):
@@ -66,7 +66,7 @@ def visit_Call(
         is_name_attr(
             node=node.func,
             imports=state.from_imports,
-            mods=("timezone",),
+            mods=("timezone", "django.utils.timezone"),
             names={"make_aware"},
         )
         and len(node.args) == 1

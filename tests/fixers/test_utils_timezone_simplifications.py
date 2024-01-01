@@ -7,7 +7,7 @@ from tests.fixers.tools import check_transformed
 settings = Settings(target_version=(5, 0))
 
 
-def test_noop():
+def test_noop_specific_date():
     check_noop(
         """\
         from django.utils import timezone
@@ -16,6 +16,51 @@ def test_noop():
         timezone.localtime(timezone.make_aware(dt.datetime(2022, 1, 1)))
         my_date = timezone.make_aware(dt.datetime(2022, 1, 1))
         timezone.localdate(my_date)
+        """,
+        settings,
+    )
+
+
+def test_noop_full_datetime_import():
+    check_noop(
+        """\
+        from django.utils import timezone
+        from datetime.datetime import now
+
+        timezone.make_aware(now())
+        """,
+        settings,
+    )
+
+
+def test_noop_other_module_now():
+    check_noop(
+        """\
+        from django.utils import timezone
+        import foo
+
+        timezone.make_aware(foo.now())
+        """,
+        settings,
+    )
+
+
+def test_noop_other_default():
+    check_noop(
+        """\
+        from django.utils import timezone
+        from foo import now
+
+        timezone.make_aware(now())
+        """,
+        settings,
+    )
+
+
+def test_missing_imports():
+    check_noop(
+        """\
+        localtime(now())
         """,
         settings,
     )
@@ -32,6 +77,22 @@ def test_transform_unnecessary_localtime_default():
         from django.utils import timezone
 
         timezone.localtime()
+        """,
+        settings,
+    )
+
+
+def test_transform_unnecessary_localtime_default_full_import():
+    check_transformed(
+        """\
+        from django.utils.timezone import localtime, now
+
+        localtime(now())
+        """,
+        """\
+        from django.utils.timezone import localtime, now
+
+        localtime()
         """,
         settings,
     )
