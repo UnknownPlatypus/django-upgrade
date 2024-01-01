@@ -395,18 +395,21 @@ def replace_argument_names(
 
 def remove_arg(
     tokens: list[Token],
-    *,
     func_args: list[tuple[int, int]],
-    arg_idx_to_remove: int,
+    func_end_idx: int,
+    *,
+    arg_idx: int,
 ) -> None:
     nb_args = len(func_args)
-    start_idx, end_idx = func_args[arg_idx_to_remove]
+    start_idx, end_idx = func_args[arg_idx]
 
     if nb_args == 1:
-        # Argument is the only node.
-        del tokens[start_idx:end_idx]
+        # Argument is the only node
+        # Delete everything inside the parenthesis.
+        func_end_idx = reverse_consume(tokens, func_end_idx - 1, name=PHYSICAL_NEWLINE)
+        del tokens[start_idx:func_end_idx]
 
-    elif arg_idx_to_remove + 1 != nb_args:
+    elif arg_idx + 1 != nb_args:
         # Argument is not the last node.
         # Delete from the argument start until the next comma.
         end_idx = find(tokens, end_idx, name=OP, src=",")
@@ -415,12 +418,13 @@ def remove_arg(
         end_idx += 1
         del tokens[start_idx:end_idx]
 
-    elif arg_idx_to_remove + 1 == nb_args:
+    else:
         # Argument is the last node.
-        # Delete from the previous comma to the argument end.
-        _, previous_end_idx = func_args[arg_idx_to_remove - 1]
+        # Delete from the previous comma to the function end.
+        _, previous_end_idx = func_args[arg_idx - 1]
         start_idx = find(tokens, previous_end_idx, name=OP, src=",")
-        del tokens[start_idx:end_idx]
+        func_end_idx = reverse_consume(tokens, func_end_idx - 1, name=PHYSICAL_NEWLINE)
+        del tokens[start_idx:func_end_idx]
 
 
 str_repr_single_to_double = str.maketrans(

@@ -48,7 +48,7 @@ def test_transform_three_level():
         """,
         """\
         MyModel.objects.select_related(
-            "category__best_article__author",
+            "category__best_article__author"
         )
         """,
         settings,
@@ -68,7 +68,22 @@ def test_transform_multiline():
         """\
         MyModel.objects.select_related(
             "variables__variablevalues",
-            "category__best_article",
+            "category__best_article"
+        )
+        """,
+        settings,
+    )
+
+
+def test_transform_arg_on_single_line():
+    check_transformed(
+        """\
+        MyModel.objects.select_related(
+            "category", "variables__bla", "category__best_article", "variables",
+        )
+        """,
+        """\
+        MyModel.objects.select_related("variables__bla", "category__best_article"
         )
         """,
         settings,

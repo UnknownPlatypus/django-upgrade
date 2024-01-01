@@ -58,18 +58,16 @@ def visit_Call(
 
 def remove_providing_args(tokens: list[Token], i: int, *, node: ast.Call) -> None:
     j = find(tokens, i, name=OP, src="(")
-    func_args, _ = parse_call_args(tokens, j)
+    func_args, end_idx = parse_call_args(tokens, j)
 
     if len(node.args):
-        start_idx, end_idx = func_args[0]
         if len(node.args) == 1:
-            del tokens[start_idx:end_idx]
+            remove_arg(tokens, func_args, end_idx, arg_idx=0)
         else:
             # Have to replace with None
+            start_idx, end_idx = func_args[0]
             tokens[start_idx:end_idx] = [Token(name=CODE, src="None")]
     else:
         for n, keyword in enumerate(node.keywords):
             if keyword.arg == "providing_args":
-                remove_arg(
-                    tokens, func_args=func_args, arg_idx_to_remove=len(node.args) + n
-                )
+                remove_arg(tokens, func_args, end_idx, arg_idx=n)

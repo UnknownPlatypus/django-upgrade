@@ -69,7 +69,7 @@ def simplify_related_lookup(
     tokens: list[Token], i: int, *, args_idx_to_remove: list[int]
 ) -> None:
     open_idx = reverse_find(tokens, i, name=OP, src="(")
-    func_args, _ = parse_call_args(tokens, open_idx)
+    func_args, end_idx = parse_call_args(tokens, open_idx)
 
     for arg_idx in sorted(args_idx_to_remove, reverse=True):
-        remove_arg(tokens, func_args=func_args, arg_idx_to_remove=arg_idx)
+        remove_arg(tokens, func_args, end_idx, arg_idx=arg_idx)
