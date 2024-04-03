@@ -2,6 +2,7 @@
 
 This is used to introspect field definitions.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -15,6 +16,9 @@ from django_upgrade.main import TARGET_VERSION_CHOICES
 _DJANGO_GIT_URL = "https://github.com/django/django"
 _CLONE_TARGET_DIR = Path.cwd() / ".django"
 _DJANGO_MODEL_FIELD_FILE = _CLONE_TARGET_DIR / "django/db/models/fields/__init__.py"
+# TODO from django.db.models.fields.json import JSONField
+# TODO from django.db.models.fields.files import FileField, ImageField
+# TODO from django.db.models.fields.related import (
 _DJANGO_FIELD_ORDER_CONST_FILE = "src/django_upgrade/field_order_const.py"
 
 
@@ -145,9 +149,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         print(f"Parsing model field args for {git_branch}...")
         args_by_field = parse_field_args()
-        output_dict[
-            tuple(int(part) for part in target_version.split("."))
-        ] = get_ordered_full_kw_list(args_by_field)
+        output_dict[tuple(int(part) for part in target_version.split("."))] = (
+            get_ordered_full_kw_list(args_by_field)
+        )
 
     # Keep list only for non-backward compatible versions.
     versions_to_keep = set()
