@@ -42,7 +42,6 @@ def test_pos_arg_alone_trailing_comma():
         from django.dispatch import Signal
         Signal()
         """,
-        settings,
     )
 
 
