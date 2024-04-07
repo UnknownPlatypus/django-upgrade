@@ -21,6 +21,9 @@ PHYSICAL_NEWLINE = "NL"
 STRING = "STRING"
 
 
+BRACES = {"(": ")", "[": "]", "{": "}"}
+OPENING, CLOSING = frozenset(BRACES), frozenset(BRACES.values())
+
 # Basic functions
 
 
@@ -68,30 +71,49 @@ def find_first_token(tokens: list[Token], i: int, *, node: ast.AST) -> int:
     """
     Find the first token corresponding to the given ast node.
     """
-    j = i
-    while tokens[j].line is None or tokens[j].line < node.lineno:
-        j += 1
+    while tokens[i].line is None or tokens[i].line < node.lineno:
+        i += 1
     while (
-        tokens[j].utf8_byte_offset is None
-        or tokens[j].utf8_byte_offset < node.col_offset
+        tokens[i].utf8_byte_offset is None
+        or tokens[i].utf8_byte_offset < node.col_offset
     ):
-        j += 1
-    return j
+        i += 1
+    return i
 
 
 def find_last_token(tokens: list[Token], i: int, *, node: ast.AST) -> int:
     """
     Find the last token corresponding to the given ast node.
     """
-    j = i
-    while tokens[j].line is None or tokens[j].line < node.end_lineno:
-        j += 1
+    while tokens[i].line is None or tokens[i].line < node.end_lineno:
+        i += 1
     while (
-        tokens[j].utf8_byte_offset is None
-        or tokens[j].utf8_byte_offset < node.end_col_offset
+        tokens[i].utf8_byte_offset is None
+        or tokens[i].utf8_byte_offset < node.end_col_offset
     ):
-        j += 1
-    return j - 1
+        i += 1
+    return i - 1
+
+
+def reverse_consume_non_semantic_elements(tokens: list[Token], i: int) -> int:
+    """Rewind past any non-semantic tokens (PHYSICAL_NEWLINE, COMMENTS, ...)"""
+    while tokens[i - 1].name in NON_CODING_TOKENS:
+        i -= 1
+    return i
+
+
+def find_first_token_at_line(
+    tokens: list[Token],
+    i: int,
+    *,
+    line: int,
+) -> int:
+    """
+    Find the first token corresponding to the given line number.
+    """
+    while tokens[i].line is None or tokens[i].line < line:
+        i += 1
+    return i
 
 
 def extract_indent(tokens: list[Token], i: int) -> tuple[int, str]:
@@ -121,11 +143,6 @@ def alone_on_line(tokens: list[Token], start_idx: int, end_idx: int) -> bool:
 
 
 # More complex mini-parsers
-
-
-BRACES = {"(": ")", "[": "]", "{": "}"}
-
-
 def parse_call_args(
     tokens: list[Token],
     i: int,
@@ -157,10 +174,6 @@ def parse_call_args(
         i += 1
 
     return args, i
-
-
-BRACES = {"(": ")", "[": "]", "{": "}"}
-OPENING, CLOSING = frozenset(BRACES), frozenset(BRACES.values())
 
 
 def find_block_start(tokens: list[Token], i: int) -> int:

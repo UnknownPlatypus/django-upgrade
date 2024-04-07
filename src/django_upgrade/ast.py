@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import warnings
+from typing import Container
 from typing import Literal
 
 from tokenize_rt import Offset
@@ -50,3 +51,31 @@ def looks_like_test_client_call(
         and isinstance(node.func.value.value, ast.Name)
         and node.func.value.value.id == "self"
     )
+
+
+def is_name_attr(
+    node: ast.AST,
+    imports: dict[str, set[str]],
+    mods: tuple[str, ...],
+    names: Container[str],
+) -> bool:
+    return (
+        isinstance(node, ast.Name)
+        and node.id in names
+        and any(node.id in imports[mod] for mod in mods)
+    ) or (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id in mods
+        and node.attr in names
+    )
+
+
+def is_single_target_assign(node: ast.Assign | ast.AnnAssign) -> ast.AST | None:
+    if isinstance(node, ast.Assign) and len(node.targets) == 1:
+        return node.targets[0]
+
+    if isinstance(node, ast.AnnAssign) and node.value is not None:
+        return node.target
+
+    return None
