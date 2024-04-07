@@ -476,10 +476,10 @@ def reorder_call_kwargs(
     func_kwargs = func_args[len(node.args) :]
     if node.args:
         start_idx = func_kwargs[0][0]
-    if len(ordered_kwargs_idx) != len(node.keywords):
-        # Needed because func_args might contain an empty last arg
-        # if the arg list have a trailing comma.
-        func_kwargs = func_kwargs[:-1]
+    # if len(ordered_kwargs_idx) != len(func_kwargs):
+    #     # Needed because func_args might contain an empty last arg
+    #     # if the arg list have a trailing comma.
+    #     func_kwargs = func_kwargs[:-1]
 
     if (tokens[close_idx - 1].line - tokens[open_idx + 1].line) == 0:
         # Case 1: Call and args are on a single line.

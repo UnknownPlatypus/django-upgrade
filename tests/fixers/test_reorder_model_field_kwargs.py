@@ -1,12 +1,22 @@
 from __future__ import annotations
 
-import pytest
-
 from django_upgrade.data import Settings
 from tests.fixers.tools import check_noop
 from tests.fixers.tools import check_transformed
 
 settings = Settings(target_version=(0, 0))
+
+
+def test_noop_not_a_model_file():
+    check_noop(
+        """\
+        from django.db import models
+
+        class Comment(models.Model):
+            bad_order = models.CharField(max_length=100, verbose_name="")
+        """,
+        settings,
+    )
 
 
 def test_noop_single_kwarg():
@@ -67,6 +77,38 @@ def test_noop_ordered_kwarg_with_args():
             )
             also_ordered = models.BooleanField("verbose_name", null=True, default=False)
 
+        """,
+        settings,
+        filename="models.py",
+    )
+
+
+def test_noop_only_custom_kwarg():
+    check_noop(
+        """\
+        from django.db import models
+
+        class Comment(models.Model):
+            one_kwarg = models.CustomEmailField("Author Name", tartine=100, turlu=100)
+        """,
+        settings,
+        filename="models.py",
+    )
+
+
+def test_transform_custom_kwarg():
+    check_transformed(
+        """\
+        from django.db import models
+
+        class Comment(models.Model):
+            one_kwarg = models.CustomEmailField(turlu=100, verbose_name="Author Name")
+        """,
+        """\
+        from django.db import models
+
+        class Comment(models.Model):
+            one_kwarg = models.CustomEmailField(verbose_name="Author Name", turlu=100)
         """,
         settings,
         filename="models.py",
@@ -809,25 +851,25 @@ def test_long_in_between_comment():
     )
 
 
-@pytest.mark.skip("not implemented")
-def test_transform_fk():
-    check_transformed(
-        """\
-        from django.db import models
-
-        class Comment(models.Model):
-            bad_order_fk = models.ForeignKey(
-                to="blog.Article", on_delete=models.CASCADE, related_name="c"
-            )
-        """,
-        """\
-        from django.db import models
-
-        class Comment(models.Model):
-            bad_order_fk = models.ForeignKey(
-                to="blog.Article", on_delete=models.CASCADE, related_name="c"
-            )
-        """,
-        settings,
-        filename="models.py",
-    )
+# @pytest.mark.skip("not implemented")
+# def test_transform_fk():
+#     check_transformed(
+#         """\
+#         from django.db import models
+#
+#         class Comment(models.Model):
+#             bad_order_fk = models.ForeignKey(
+#                 to="blog.Article", on_delete=models.CASCADE, related_name="c"
+#             )
+#         """,
+#         """\
+#         from django.db import models
+#
+#         class Comment(models.Model):
+#             bad_order_fk = models.ForeignKey(
+#                 to="blog.Article", on_delete=models.CASCADE, related_name="c"
+#             )
+#         """,
+#         settings,
+#         filename="models.py",
+#     )
