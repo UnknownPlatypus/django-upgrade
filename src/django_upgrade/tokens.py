@@ -393,6 +393,52 @@ def replace_argument_names(
                 raise AssertionError(f"{keyword.arg} argument not found")
 
 
+def remove_arg(
+    tokens: list[Token],
+    func_args: list[tuple[int, int]],
+    func_end_idx: int,
+    *,
+    arg_idx: int,
+) -> None:
+    nb_args = len(func_args)
+    start_idx, end_idx = func_args[arg_idx]
+
+    if nb_args == 1:
+        # Argument is the only node
+        # Delete everything inside the parenthesis.
+        func_end_idx = reverse_consume(tokens, func_end_idx - 1, name=PHYSICAL_NEWLINE)
+        del tokens[start_idx:func_end_idx]
+
+    elif arg_idx + 1 != nb_args:
+        # Argument is not the last node.
+        # Delete from the argument start until the next comma.
+        end_idx = find(tokens, end_idx, name=OP, src=",")
+        end_idx = consume(tokens, end_idx, name=UNIMPORTANT_WS)
+        end_idx = consume(tokens, end_idx, name=COMMENT)
+        end_idx += 1
+
+        if arg_idx == 0:
+            # Preserve comment between open paren and first argument.
+            start_idx = consume(tokens, start_idx - 1, name=UNIMPORTANT_WS) + 1
+            start_idx = consume(tokens, start_idx - 1, name=COMMENT) + 1
+            if tokens[start_idx].name == PHYSICAL_NEWLINE:
+                start_idx += 1
+                start_idx = consume(tokens, start_idx - 1, name=UNIMPORTANT_WS) + 1
+            if tokens[end_idx].name == PHYSICAL_NEWLINE:
+                end_idx += 1
+                end_idx = consume(tokens, end_idx - 1, name=UNIMPORTANT_WS) + 1
+
+        del tokens[start_idx:end_idx]
+
+    else:
+        # Argument is the last node.
+        # Delete from the previous comma to the function end.
+        _, previous_end_idx = func_args[arg_idx - 1]
+        start_idx = find(tokens, previous_end_idx, name=OP, src=",")
+        func_end_idx = reverse_consume(tokens, func_end_idx - 1, name=PHYSICAL_NEWLINE)
+        del tokens[start_idx:func_end_idx]
+
+
 str_repr_single_to_double = str.maketrans(
     {
         "'": '"',

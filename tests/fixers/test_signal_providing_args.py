@@ -32,6 +32,19 @@ def test_pos_arg_alone():
     )
 
 
+def test_pos_arg_alone_trailing_comma():
+    check_transformed(
+        """\
+        from django.dispatch import Signal
+        Signal(["documented", "arg"],)
+        """,
+        """\
+        from django.dispatch import Signal
+        Signal()
+        """,
+    )
+
+
 def test_pos_arg_alone_module_imported():
     check_transformed(
         """\
@@ -159,7 +172,7 @@ def test_kwarg_with_all_extras():
         """\
         from django.dispatch import Signal
         Signal(
-            use_caching=True,
+              use_caching=True,
         )
         """,
     )
