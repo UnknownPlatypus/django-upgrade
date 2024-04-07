@@ -416,6 +416,18 @@ def remove_arg(
         end_idx = consume(tokens, end_idx, name=UNIMPORTANT_WS)
         end_idx = consume(tokens, end_idx, name=COMMENT)
         end_idx += 1
+
+        if arg_idx == 0:
+            # Preserve comment between open paren and first argument.
+            start_idx = consume(tokens, start_idx - 1, name=UNIMPORTANT_WS) + 1
+            start_idx = consume(tokens, start_idx - 1, name=COMMENT) + 1
+            if tokens[start_idx].name == PHYSICAL_NEWLINE:
+                start_idx += 1
+                start_idx = consume(tokens, start_idx - 1, name=UNIMPORTANT_WS) + 1
+            if tokens[end_idx].name == PHYSICAL_NEWLINE:
+                end_idx += 1
+                end_idx = consume(tokens, end_idx - 1, name=UNIMPORTANT_WS) + 1
+
         del tokens[start_idx:end_idx]
 
     else:

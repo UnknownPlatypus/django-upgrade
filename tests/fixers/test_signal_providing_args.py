@@ -172,7 +172,7 @@ def test_kwarg_with_all_extras():
         """\
         from django.dispatch import Signal
         Signal(
-            use_caching=True,
+              use_caching=True,
         )
         """,
     )

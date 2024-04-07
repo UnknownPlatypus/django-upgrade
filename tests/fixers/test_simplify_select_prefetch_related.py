@@ -40,14 +40,14 @@ def test_transform():
 def test_transform_three_level():
     check_transformed(
         """\
-        MyModel.objects.select_related(
+        MyModel.objects.select_related( # Comment
             "category__best_article",
             "category__best_article__author",
             "category",
         )
         """,
         """\
-        MyModel.objects.select_related(
+        MyModel.objects.select_related( # Comment
             "category__best_article__author"
         )
         """,
@@ -75,15 +75,32 @@ def test_transform_multiline():
     )
 
 
-def test_transform_arg_on_single_line():
+def test_transform_mixed_line():
     check_transformed(
         """\
-        MyModel.objects.select_related(
+        MyModel.objects.select_related(  # Very important comment
             "category", "variables__bla", "category__best_article", "variables",
         )
         """,
         """\
-        MyModel.objects.select_related("variables__bla", "category__best_article"
+        MyModel.objects.select_related(  # Very important comment
+            "variables__bla", "category__best_article"
+        )
+        """,
+        settings,
+    )
+
+
+def test_transform_mixed_line_2_args():
+    check_transformed(
+        """\
+        MyModel.objects.select_related(  # Very important comment
+            "category", "category__best_article"
+        )
+        """,
+        """\
+        MyModel.objects.select_related(  # Very important comment
+            "category__best_article"
         )
         """,
         settings,
