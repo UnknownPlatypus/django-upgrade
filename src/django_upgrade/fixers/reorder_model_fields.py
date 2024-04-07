@@ -220,17 +220,17 @@ def reorder_class_body(
     *,
     element_types_with_range: list[tuple[ContentType, int, int]],
 ) -> None:
-    j = find_first_token_at_line(
+    start_idx = find_first_token_at_line(
         tokens,
         i,
         line=element_types_with_range[0][1],
     )
-    j = reverse_consume_non_semantic_elements(tokens, j)
-    new_tokens = tokens[i:j]
+    start_idx = reverse_consume_non_semantic_elements(tokens, start_idx)
+    start_idx = consume(tokens, start_idx - 1, name=PHYSICAL_NEWLINE) + 1
 
     element_types_to_tokens: defaultdict[ContentType, list[Token]] = defaultdict(list)
     for el_type, start_lineno, end_lineno in element_types_with_range:
-        j = find_first_token_at_line(tokens, j, line=start_lineno)
+        j = find_first_token_at_line(tokens, start_idx, line=start_lineno)
         j = reverse_consume_non_semantic_elements(tokens, j)
         j = consume(tokens, j - 1, name=PHYSICAL_NEWLINE) + 1
 
@@ -244,13 +244,13 @@ def reorder_class_body(
             # This is necessary for methods definitions.
             element_types_to_tokens[el_type].append(_PHYSICAL_NEWLINE_TOKEN)
         element_types_to_tokens[el_type].extend(tokens[j:k])
-        j = last_token_idx
 
     # Replace class body with ordered tokens.
+    new_tokens = []
     nb_blocks = len(element_types_to_tokens)
     for idx, (_, el_type_tokens) in enumerate(sorted(element_types_to_tokens.items())):
         if el_type_tokens[-1].name != PHYSICAL_NEWLINE and not idx + 1 == nb_blocks:
             # Ensure we have a trailing newline for every block (except the last one).
             el_type_tokens.append(_PHYSICAL_NEWLINE_TOKEN)
         new_tokens.extend(el_type_tokens)
-    tokens[i:j] = new_tokens
+    tokens[start_idx:last_token_idx] = new_tokens

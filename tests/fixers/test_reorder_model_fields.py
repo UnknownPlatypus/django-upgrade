@@ -533,6 +533,7 @@ def test_bare_annotations_untouched():
 
         class Article(models.Model):
             a: int
+
             author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
 
             objects: int = models.Manager()
@@ -563,6 +564,35 @@ def test_weird_repr():
             objects = models.Manager()
 
             __repr__ = my_custom_repr()
+        """,
+        settings,
+        filename="blog/models/article.py",
+    )
+
+
+def test_preserve_leading_empty_lines():
+    check_transformed(
+        """\
+        from django.db import models
+
+        class MyModel(models.Model):
+            '''docstring'''
+
+            class Meta:
+                abstract = True
+
+            title = models.CharField(max_length=255, verbose_name="H1")
+        """,
+        """\
+        from django.db import models
+
+        class MyModel(models.Model):
+            '''docstring'''
+
+            title = models.CharField(max_length=255, verbose_name="H1")
+
+            class Meta:
+                abstract = True
         """,
         settings,
         filename="blog/models/article.py",
