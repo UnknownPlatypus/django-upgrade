@@ -7,6 +7,10 @@ from tokenize_rt import Token
 from tokenize_rt import src_to_tokens
 from tokenize_rt import tokens_to_src
 
+from django_upgrade.tokens import OP
+from django_upgrade.tokens import delete_argument
+from django_upgrade.tokens import find
+from django_upgrade.tokens import parse_call_args
 from django_upgrade.tokens import str_repr_matching
 from django_upgrade.tokens import update_import_names
 
@@ -123,3 +127,26 @@ class TestUpdateImportNames:
             name_map={"b": "", "c": ""},
             after="from a import d",
         )
+
+
+@pytest.mark.parametrize(
+    "before, delete_idx, after",
+    (
+        ("call(ids=1, test=2)", 0, "call(test=2)"),
+        ("call(ids=1, test=2)", 1, "call(ids=1)"),
+        ("call(ids=1, \ntest=2)", 1, "call(ids=1)"),
+        ("call(\nids=1, \ntest=2)", 1, "call(\nids=1)"),
+        (
+            "call(\n \nids= 1 \n   \n,\n  \ntest = 2\n\n )",
+            0,
+            "call(\n  \ntest = 2\n\n )",
+        ),
+    ),
+)
+def test_delete_arguments(before, delete_idx, after):
+    tokens, mod = tokenize_and_parse(before)
+    j = find(tokens, 0, name=OP, src="(")
+    func_args, _ = parse_call_args(tokens, j)
+    delete_argument(delete_idx, tokens, func_args)
+
+    assert tokens_to_src(tokens) == after
