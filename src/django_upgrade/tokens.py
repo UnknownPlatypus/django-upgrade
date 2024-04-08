@@ -3,8 +3,8 @@ from __future__ import annotations
 import ast
 import re
 from collections import defaultdict
-from typing import cast
 from typing import Sequence
+from typing import cast
 
 from tokenize_rt import NON_CODING_TOKENS
 from tokenize_rt import UNIMPORTANT_WS
@@ -108,13 +108,6 @@ def find_last_token(tokens: list[Token], i: int, *, node: ast.AST) -> int:
     ):
         i += 1
     return i - 1
-
-
-def reverse_consume_non_semantic_elements(tokens: list[Token], i: int) -> int:
-    """Rewind past any non-semantic tokens (PHYSICAL_NEWLINE, COMMENTS, ...)"""
-    while tokens[i - 1].name in NON_CODING_TOKENS:
-        i -= 1
-    return i
 
 
 def find_first_token_at_line(

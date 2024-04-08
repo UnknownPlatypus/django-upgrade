@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+from functools import partial
+
 from django_upgrade.data import Settings
-from tests.fixers.tools import check_noop
-from tests.fixers.tools import check_transformed
+from tests.fixers import tools
 
 settings = Settings(target_version=(0, 0))
+check_noop = partial(tools.check_noop, settings=settings, filename="test.py")
+check_transformed = partial(
+    tools.check_transformed, settings=settings, filename="test.py"
+)
 
 
 def test_params_generated_from_func():
@@ -21,7 +26,6 @@ def test_params_generated_from_func():
         def test_check_if_responder_could_be_available(due_by, expected):
             pass
         """,
-        settings,
     )
 
 
@@ -47,7 +51,6 @@ def test_empty_ids():
         def test_check_if_responder_could_be_available(due_by, expected):
             pass
         """,
-        settings,
     )
 
 
@@ -91,7 +94,6 @@ def test_rewrite_tuple():
         def test_check_if_responder_could_be_available(due_by, expected):
             pass
         """,
-        settings,
     )
 
 
@@ -135,7 +137,6 @@ def test_rewrite_list():
         def test_check_if_responder_could_be_available(due_by, expected):
             pass
         """,
-        settings,
     )
 
 
@@ -166,7 +167,6 @@ def test_rewrite_weird_list():
         def test_check_if_responder_could_be_available(due_by, expected):
             pass
         """,
-        settings,
     )
 
 
@@ -232,7 +232,6 @@ def test_rewrite_multiline():
         def test_check_if_responder_could_be_available(due_by, expected):
             pass
         """,
-        settings,
     )
 
 
@@ -264,7 +263,6 @@ def test_rewrite_single_arg_first_arg_str():
         def test_thing(events_data, expected):
             pass
         """,
-        settings,
     )
 
 
@@ -302,7 +300,6 @@ def test_rewrite_single_arg_first_arg_str_multiline():
         def test_thing(events_data, expected):
             pass
         """,
-        settings,
     )
 
 
@@ -334,5 +331,4 @@ def test_rewrite_single_arg_first_arg_sequence_str():
         def test_thing(events_data, expected):
             pass
         """,
-        settings,
     )

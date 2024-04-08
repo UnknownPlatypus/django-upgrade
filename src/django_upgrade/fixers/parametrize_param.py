@@ -1,12 +1,13 @@
 """
 Use multiple `pytest.param(..., id=...)` over `ids=[...]`
 """
+
 from __future__ import annotations
 
 import ast
 from functools import partial
-from typing import cast
 from typing import Iterable
+from typing import cast
 
 from tokenize_rt import Offset
 from tokenize_rt import Token
@@ -15,16 +16,15 @@ from django_upgrade.ast import ast_start_offset
 from django_upgrade.data import Fixer
 from django_upgrade.data import State
 from django_upgrade.data import TokenFunc
+from django_upgrade.tokens import OP
 from django_upgrade.tokens import delete_argument
 from django_upgrade.tokens import find
 from django_upgrade.tokens import find_first_token
 from django_upgrade.tokens import find_last_token
 from django_upgrade.tokens import insert
-from django_upgrade.tokens import OP
 from django_upgrade.tokens import parse_call_args
 from django_upgrade.tokens import replace
 from django_upgrade.tokens import reverse_consume_non_semantic_elements
-
 
 fixer = Fixer(
     __name__,
@@ -39,7 +39,8 @@ def visit_Call(
     parents: list[ast.AST],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
-        isinstance(node.func, ast.Attribute)
+        state.looks_like_test_file
+        and isinstance(node.func, ast.Attribute)
         and node.func.attr == "parametrize"
         and isinstance(node.func.value, ast.Attribute)
         and node.func.value.attr == "mark"

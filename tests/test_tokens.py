@@ -7,9 +7,9 @@ from tokenize_rt import Token
 from tokenize_rt import src_to_tokens
 from tokenize_rt import tokens_to_src
 
+from django_upgrade.tokens import OP
 from django_upgrade.tokens import delete_argument
 from django_upgrade.tokens import find
-from django_upgrade.tokens import OP
 from django_upgrade.tokens import parse_call_args
 from django_upgrade.tokens import str_repr_matching
 from django_upgrade.tokens import update_import_names
