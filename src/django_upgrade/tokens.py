@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import re
 from collections import defaultdict
+from typing import cast
 
 from tokenize_rt import NON_CODING_TOKENS
 from tokenize_rt import UNIMPORTANT_WS
@@ -33,6 +34,19 @@ def find(tokens: list[Token], i: int, *, name: str, src: str | None = None) -> i
     """
     while tokens[i].name != name or (src is not None and tokens[i].src != src):
         i += 1
+    return i
+
+
+def find_until(
+    tokens: list[Token], i: int, *, end: int, name: str, src: str | None = None
+) -> int | None:
+    """
+    Find the next token matching name and src.
+    """
+    while tokens[i].name != name or (src is not None and tokens[i].src != src):
+        i += 1
+        if i == end:
+            return None
     return i
 
 
@@ -121,13 +135,12 @@ def extract_indent(tokens: list[Token], i: int) -> tuple[int, str]:
     If the previous token is and indent, return its position and the
     indentation string. Otherwise return the current position and "".
     """
-    j = i
-    if j > 0 and tokens[j - 1].name in (INDENT, UNIMPORTANT_WS):
-        j -= 1
-        indent = tokens[j].src
+    if i > 0 and tokens[i - 1].name in (INDENT, UNIMPORTANT_WS):
+        i -= 1
+        indent = tokens[i].src
     else:
         indent = ""
-    return (j, indent)
+    return (i, indent)
 
 
 def alone_on_line(tokens: list[Token], start_idx: int, end_idx: int) -> bool:
@@ -174,6 +187,10 @@ def parse_call_args(
         i += 1
 
     return args, i
+
+
+def arg_str(tokens: list[Token], start: int, end: int) -> str:
+    return tokens_to_src(tokens[start:end]).strip()  # type: ignore[no-any-return]
 
 
 def find_block_start(tokens: list[Token], i: int) -> int:
@@ -437,6 +454,148 @@ def remove_arg(
         start_idx = find(tokens, previous_end_idx, name=OP, src=",")
         func_end_idx = reverse_consume(tokens, func_end_idx - 1, name=PHYSICAL_NEWLINE)
         del tokens[start_idx:func_end_idx]
+
+
+def reorder_call_kwargs(
+    tokens: list[Token],
+    i: int,
+    *,
+    node: ast.Call,
+    ordered_kwargs_idx: list[int],
+) -> None:
+    """
+    Depending on the number of args/kwargs, we might have more work
+    to do to retain comments. Don't call this function if the call
+    has 0 or 1 arguments, there is nothing to reorder.
+    """
+    open_idx = find(tokens, i, name=OP, src="(")
+    start_idx = open_idx + 1
+    func_args, close_idx = parse_call_args(tokens, open_idx)
+
+    # Extract func kwargs only.
+    func_kwargs = func_args[len(node.args) :]
+    if node.args:
+        start_idx = func_kwargs[0][0]
+    # if len(ordered_kwargs_idx) != len(func_kwargs):
+    #     # Needed because func_args might contain an empty last arg
+    #     # if the arg list have a trailing comma.
+    #     func_kwargs = func_kwargs[:-1]
+
+    if (tokens[close_idx - 1].line - tokens[open_idx + 1].line) == 0:
+        # Case 1: Call and args are on a single line.
+        # This case is easier because we cannot have comments in the argument range.
+        start_idx = find(tokens, start_idx, name=NAME)
+        arg_strs = [arg_str(tokens, *arg) for arg in func_kwargs]
+        tokens[start_idx : close_idx - 1] = [
+            Token(CODE, src=", ".join(arg_strs[idx] for idx in ordered_kwargs_idx))
+        ]
+
+    elif (tokens[func_args[-1][0]].line - tokens[func_args[0][1]].line) == 0 and (
+        tokens[close_idx].line - tokens[open_idx].line
+    ) == 2:
+        # Case 2: Call is on multiple lines but every arguments are on the same line.
+        # We have this branch to preserve style, otherwise last branch would have
+        # forced one argument per line.
+        # 2.1 First extract starting tokens.
+        start_idx = find(tokens, start_idx, name=NAME)
+        func_kwargs[0] = (start_idx, func_kwargs[0][1])
+
+        # 2.2 Then extract trailing tokens (capturing comments if they exist).
+        comment_start_idx = find_until(
+            tokens, func_kwargs[-1][0], end=close_idx - 1, name=COMMENT
+        )
+        if comment_start_idx is not None:
+            tail_start_idx = reverse_consume(
+                tokens, comment_start_idx, name=UNIMPORTANT_WS
+            )
+        else:
+            tail_start_idx = (
+                find_first_token_at_line(
+                    tokens, func_kwargs[-1][0], line=tokens[close_idx].line
+                )
+                - 1
+            )
+        if tail_start_idx < func_kwargs[-1][1]:
+            func_kwargs[-1] = (func_kwargs[-1][0], tail_start_idx)
+
+        # 2.3 Add ordered arguments.
+        arg_strs = [arg_str(tokens, *arg) for arg in func_kwargs]
+        tokens[start_idx:tail_start_idx] = [
+            Token(CODE, src=", ".join(arg_strs[idx] for idx in ordered_kwargs_idx))
+        ]
+
+    else:
+        # Case 3: Call is on multiple lines with one arg per line.
+        # 3.1 First extract starting tokens.
+        if node.args:
+            if node.args[-1].lineno < node.keywords[0].value.lineno:
+                start_idx = find_first_token_at_line(
+                    tokens, open_idx, line=node.args[-1].lineno + 1
+                )
+        elif node.keywords[0].value.lineno > tokens[open_idx].line:
+            # Use `tokens[open_idx].line + 1` to bind comments with the first arg.
+            start_idx = find_first_token_at_line(
+                tokens, open_idx, line=tokens[open_idx].line + 1
+            )
+        func_kwargs[0] = (start_idx, func_kwargs[0][1])
+
+        # 3.2 Use the first kwarg to determine the indent.
+        _, indent = extract_indent(tokens, start_idx + 1)
+
+        # 3.3 Then extract trailing tokens.
+        last_arg_end_lineno = cast(int, node.keywords[-1].value.end_lineno)
+        closing_paren_lineno = tokens[close_idx].line
+        if last_arg_end_lineno < closing_paren_lineno:
+            # Last argument and closing paren on different lines,
+            tail_start_idx = find_first_token_at_line(
+                tokens, func_kwargs[-1][0], line=last_arg_end_lineno + 1
+            )
+            if tail_start_idx < func_kwargs[-1][1]:
+                # we might have dangling comments to capture but also need to
+                # handle accurately multiline string with paren that have
+                # incorrect offsets in the ast.
+                paren = find_until(
+                    tokens, tail_start_idx, end=func_kwargs[-1][1], name=OP, src=")"
+                )
+                if paren:
+                    tail_start_idx = find_first_token_at_line(
+                        tokens, tail_start_idx, line=tokens[paren].line + 1
+                    )
+                if func_kwargs[-1][1] > tail_start_idx:
+                    func_kwargs[-1] = (func_kwargs[-1][0], tail_start_idx)
+        else:
+            # Last arg and closing paren are on the same line.
+            tail_start_idx = close_idx - 1
+
+        # 3.4 Extract every func_kwargs string value with possible trailing comments.
+        arg_strs: list[str] = []  # type: ignore[no-redef]
+        comment_strs: list[str] = ["" for _ in range(len(func_kwargs))]
+        for i, (start, end) in enumerate(func_kwargs):
+            if i != 0 and (
+                comment_idx := find_until(tokens, start, end=end, name=COMMENT)
+            ):
+                # Capture possible trailing comments from previous arg
+                if (
+                    comment_idx is not None
+                    and tokens[comment_idx].line == tokens[func_kwargs[i - 1][1]].line
+                ):
+                    comment_start_idx = reverse_consume(
+                        tokens, comment_idx, name=UNIMPORTANT_WS
+                    )
+                    comment_strs[i - 1] = tokens_to_src(
+                        tokens[comment_start_idx : comment_idx + 1]
+                    )
+                    arg_strs.append(arg_str(tokens, comment_idx + 2, end))
+                else:
+                    arg_strs.append(arg_str(tokens, start, end))
+            else:
+                arg_strs.append(arg_str(tokens, start, end))
+
+        # 3.5 Add ordered arguments.
+        tokens[start_idx:tail_start_idx] = [
+            Token(CODE, src=f"{indent}{arg_strs[idx]},{comment_strs[idx]}\n")
+            for idx in ordered_kwargs_idx
+        ]
 
 
 str_repr_single_to_double = str.maketrans(

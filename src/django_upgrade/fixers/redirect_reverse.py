@@ -10,8 +10,8 @@ from django_upgrade.ast import ast_start_offset
 from django_upgrade.data import Fixer
 from django_upgrade.data import State
 from django_upgrade.data import TokenFunc
-from django_upgrade.tokens import find
 from django_upgrade.tokens import OP
+from django_upgrade.tokens import find
 from django_upgrade.tokens import parse_call_args
 
 fixer = Fixer(

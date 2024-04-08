@@ -19,6 +19,24 @@ from django_upgrade.data import Settings
 from django_upgrade.data import visit
 from django_upgrade.tokens import DEDENT
 
+TARGET_VERSION_CHOICES = [
+    "1.7",
+    "1.8",
+    "1.9",
+    "1.10",
+    "1.11",
+    "2.0",
+    "2.1",
+    "2.2",
+    "3.0",
+    "3.1",
+    "3.2",
+    "4.0",
+    "4.1",
+    "4.2",
+    "5.0",
+]
+
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
@@ -27,23 +45,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--target-version",
         default="2.2",
-        choices=[
-            "1.7",
-            "1.8",
-            "1.9",
-            "1.10",
-            "1.11",
-            "2.0",
-            "2.1",
-            "2.2",
-            "3.0",
-            "3.1",
-            "3.2",
-            "4.0",
-            "4.1",
-            "4.2",
-            "5.0",
-        ],
+        choices=TARGET_VERSION_CHOICES,
     )
     parser.add_argument(
         "--version",

@@ -15,7 +15,7 @@ def test_noop_wrong_filename():
         class Article(models.Model):
             objects: int = models.Manager()
             truc = fkjehgfdManager()
-            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+            author_name = models.CharField(verbose_name=_("Nom"), max_length=100)
         """,
         settings,
     )
@@ -27,8 +27,8 @@ def test_noop_ordered_class():
         from django.db import models
 
         class Article(models.Model):
-            author_name = models.CharField(max_length=100, verbose_name=_("Name"))
-            title = models.CharField(max_length=100, verbose_name=_("Title"))
+            author_name = models.CharField(verbose_name=_("Name"), max_length=100)
+            title = models.CharField(verbose_name=_("Title"), max_length=100)
 
             objects = models.Manager()
             validated = ValidatedCommentManager()
@@ -98,7 +98,7 @@ def test_annotated_fields_and_managers():
         from django.db import models
 
         class Article(models.Model):
-            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+            author_name = models.CharField(verbose_name=_("Nom"), max_length=100)
 
             people = models.Manager()
             people2 = PersonQuerySet.as_manager()
@@ -108,15 +108,15 @@ def test_annotated_fields_and_managers():
             objects: PollManager = PollManager()
             dahl_objects = DahlBookManager()
 
-            author_name2: str = models.CharField(max_length=100, verbose_name=_("Nom"))
+            author_name2: str = models.CharField(verbose_name=_("Nom"), max_length=100)
         """,
         """\
         from django.db import models
 
         class Article(models.Model):
-            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+            author_name = models.CharField(verbose_name=_("Nom"), max_length=100)
 
-            author_name2: str = models.CharField(max_length=100, verbose_name=_("Nom"))
+            author_name2: str = models.CharField(verbose_name=_("Nom"), max_length=100)
 
             people = models.Manager()
             people2 = PersonQuerySet.as_manager()
@@ -137,14 +137,14 @@ def test_last_element_expr():
         from django.db import models
 
         class Article(models.Model):
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
 
             def my_method(self) -> str:
                 return ""
 
             my_method.short_description = "short desc"
 
-            sub_title = models.CharField(max_length=255, verbose_name="H1")
+            sub_title = models.CharField(verbose_name="H1", max_length=255)
 
             def my_method2(self) -> str:
                 return ""
@@ -155,9 +155,9 @@ def test_last_element_expr():
         from django.db import models
 
         class Article(models.Model):
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
 
-            sub_title = models.CharField(max_length=255, verbose_name="H1")
+            sub_title = models.CharField(verbose_name="H1", max_length=255)
 
             def my_method(self) -> str:
                 return ""
@@ -180,7 +180,7 @@ def test_properties():
         from django.db import models
 
         class Article(models.Model):
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
 
             @property
             def my_property(self) -> str:
@@ -194,7 +194,7 @@ def test_properties():
             def my_property(self, value) -> str:
                 del self._prop
 
-            sub_title = models.CharField(max_length=255, verbose_name="H1")
+            sub_title = models.CharField(verbose_name="H1", max_length=255)
 
             @cached_property
             def my_cached_property(self) -> str:
@@ -204,9 +204,9 @@ def test_properties():
         from django.db import models
 
         class Article(models.Model):
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
 
-            sub_title = models.CharField(max_length=255, verbose_name="H1")
+            sub_title = models.CharField(verbose_name="H1", max_length=255)
 
             @property
             def my_property(self) -> str:
@@ -238,7 +238,7 @@ def test_extra_manager():
         class Article(models.Model):
             '''My Article class'''
             objects = MyCustomManager()
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
 
             @property
             def my_property(self) -> str:
@@ -252,7 +252,7 @@ def test_extra_manager():
 
         class Article(models.Model):
             '''My Article class'''
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
 
             objects = MyCustomManager()
 
@@ -281,7 +281,7 @@ def test_preceding_comments():
             # This is a comment
 
             # This one too
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
 
             @property
             def my_property(self) -> str:
@@ -313,7 +313,7 @@ def test_preceding_comments():
             # This is a comment
 
             # This one too
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
 
             # This comment describe
             # The following custom manager
@@ -428,7 +428,7 @@ def test_no_trailing_newline_class_end():
         from django.db import models
 
         class Article(models.Model):
-            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+            author_name = models.CharField(verbose_name=_("Nom"), max_length=100)
 
             objects = models.Manager()
             validated = ValidatedCommentManager()
@@ -449,7 +449,7 @@ def test_no_trailing_newline_class_end():
         from django.db import models
 
         class Article(models.Model):
-            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+            author_name = models.CharField(verbose_name=_("Nom"), max_length=100)
 
             objects = models.Manager()
             validated = ValidatedCommentManager()
@@ -526,7 +526,7 @@ def test_bare_annotations_untouched():
             truc = CustomManager()
             comment_set: QuerySet[Comment]
 
-            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+            author_name = models.CharField(verbose_name=_("Nom"), max_length=100)
         """,
         """\
         from django.db import models
@@ -534,7 +534,7 @@ def test_bare_annotations_untouched():
         class Article(models.Model):
             a: int
 
-            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+            author_name = models.CharField(verbose_name=_("Nom"), max_length=100)
 
             objects: int = models.Manager()
             truc = CustomManager()
@@ -553,13 +553,13 @@ def test_weird_repr():
         class Article(models.Model):
             objects = models.Manager()
             __repr__ = my_custom_repr()
-            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+            author_name = models.CharField(verbose_name=_("Nom"), max_length=100)
         """,
         """\
         from django.db import models
 
         class Article(models.Model):
-            author_name = models.CharField(max_length=100, verbose_name=_("Nom"))
+            author_name = models.CharField(verbose_name=_("Nom"), max_length=100)
 
             objects = models.Manager()
 
@@ -581,7 +581,7 @@ def test_preserve_leading_empty_lines():
             class Meta:
                 abstract = True
 
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
         """,
         """\
         from django.db import models
@@ -589,7 +589,7 @@ def test_preserve_leading_empty_lines():
         class MyModel(models.Model):
             '''docstring'''
 
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
 
             class Meta:
                 abstract = True
@@ -609,13 +609,13 @@ def test_docstring_as_comment_not_supported():
                 abstract = True
 
             '''Specific fields'''
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
         """,
         """\
         from django.db import models
 
         class MyModel(models.Model):
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
 
             class Meta:
                 abstract = True
@@ -654,20 +654,20 @@ def test_full_transform():
 
         class Article(PlusPlusMixin, models.Model, metaclass=PlusPlusMetaClass):
             '''docstring'''
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
             meta_title = models.CharField(
+                verbose_name=_("Title"),
                 max_length=255,
                 blank=True,
-                verbose_name=_("Title"),
                 help_text=_("Utilisé pour les balises meta"),
             )
             # COMMENT
             status = models.CharField(
-                choices=EntryStatus.choices,
-                max_length=50,
-                default="hidden",
                 verbose_name=_("Statut"),
+                max_length=50,
                 db_index=True,
+                default="hidden",
+                choices=EntryStatus.choices,
             )
 
             objects = ArticleManager()
@@ -675,8 +675,8 @@ def test_full_transform():
             lead = HTMLField(verbose_name=_("Texte d'intro de l'article"))
             content = PlusPlusField(verbose_name=_("Contenu de l'article"))
             excerpt = models.TextField(
-                blank=True,
                 verbose_name=_("Extrait"),
+                blank=True,
             )
 
             @property
@@ -735,27 +735,27 @@ def test_full_transform():
 
         class Article(PlusPlusMixin, models.Model, metaclass=PlusPlusMetaClass):
             '''docstring'''
-            title = models.CharField(max_length=255, verbose_name="H1")
+            title = models.CharField(verbose_name="H1", max_length=255)
             meta_title = models.CharField(
+                verbose_name=_("Title"),
                 max_length=255,
                 blank=True,
-                verbose_name=_("Title"),
                 help_text=_("Utilisé pour les balises meta"),
             )
             # COMMENT
             status = models.CharField(
-                choices=EntryStatus.choices,
-                max_length=50,
-                default="hidden",
                 verbose_name=_("Statut"),
+                max_length=50,
                 db_index=True,
+                default="hidden",
+                choices=EntryStatus.choices,
             )
 
             lead = HTMLField(verbose_name=_("Texte d'intro de l'article"))
             content = PlusPlusField(verbose_name=_("Contenu de l'article"))
             excerpt = models.TextField(
-                blank=True,
                 verbose_name=_("Extrait"),
+                blank=True,
             )
 
             objects = ArticleManager()
