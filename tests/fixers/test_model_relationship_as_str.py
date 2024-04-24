@@ -86,6 +86,21 @@ def test_transform_inferred_app_name():
     )
 
 
+def test_transform_inferred_app_name_absolute_name():
+    check_transformed(
+        """\
+        class MyModel(models.Model):
+            user = models.ForeignKey("User", on_delete=models.SET_NULL)
+        """,
+        """\
+        class MyModel(models.Model):
+            user = models.ForeignKey("core.User", on_delete=models.SET_NULL)
+        """,
+        settings,
+        filename="mysite/core/models/mymodels.py",
+    )
+
+
 def test_noop_self():
     check_noop(
         """\

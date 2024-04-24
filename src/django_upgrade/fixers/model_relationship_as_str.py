@@ -49,7 +49,12 @@ def visit_Call(
             isinstance((related_model := node.args[0]), ast.Constant)
             and related_model.value != "self"
             and "." not in related_model.value
+            and "/models" in state.filename
         ):
-            app_name = os.path.normpath(state.filename).rpartition("/models")[0]
+            app_name = (
+                os.path.normpath(state.filename)
+                .rpartition("/models")[0]
+                .rpartition("/")[2]
+            )
             new_str = f"{app_name}.{related_model.value}"
             yield ast_start_offset(related_model), partial(replace, src=f'"{new_str}"')
