@@ -33,6 +33,18 @@ def test_noop_full_datetime_import():
     )
 
 
+def test_noop_multiple_args():
+    check_noop(
+        """\
+        from django.utils import timezone
+
+        timezone.localtime(timezone.now(), timezone.utc)
+        timezone.localdate(timezone.now(), timezone.utc)
+        """,
+        settings,
+    )
+
+
 def test_noop_other_module_now():
     check_noop(
         """\
@@ -98,6 +110,44 @@ def test_transform_unnecessary_localtime_default_full_import():
     )
 
 
+def test_transform_unnecessary_localtime_default_multiline():
+    check_transformed(
+        """\
+        from django.utils import timezone
+
+        timezone.localtime(
+            timezone.now()
+        )
+        timezone.localdate(
+        timezone.now())
+        """,
+        """\
+        from django.utils import timezone
+
+        timezone.localtime(
+        )
+        timezone.localdate()
+        """,
+        settings,
+    )
+
+
+def test_transform_unnecessary_localtime_default_with_tz():
+    check_transformed(
+        """\
+        from django.utils import timezone
+
+        timezone.localtime(timezone.now(), timezone=timezone.utc)
+        """,
+        """\
+        from django.utils import timezone
+
+        timezone.localtime(timezone=timezone.utc)
+        """,
+        settings,
+    )
+
+
 def test_transform_unnecessary_localdate_default():
     check_transformed(
         """\
@@ -114,22 +164,17 @@ def test_transform_unnecessary_localdate_default():
     )
 
 
-def test_transform_unnecessary_localtime_default_multiline():
+def test_transform_unnecessary_localdate_default_with_tz():
     check_transformed(
         """\
         from django.utils import timezone
 
-        timezone.localtime(
-            timezone.now()
-        )
-        timezone.localdate(
-        timezone.now())
+        timezone.localdate(timezone.now(), timezone=timezone.utc)
         """,
         """\
         from django.utils import timezone
 
-        timezone.localtime()
-        timezone.localdate()
+        timezone.localdate(timezone=timezone.utc)
         """,
         settings,
     )
@@ -196,6 +241,105 @@ def test_transform_overcomplicated_localtime_datetime():
         from datetime import datetime
 
         timezone.make_aware(datetime.now())
+        """,
+        """\
+        from django.utils import timezone
+        from datetime import datetime
+
+        timezone.localtime()
+        """,
+        settings,
+    )
+
+
+def test_transform_overcomplicated_localtime_datetime_with_timezone():
+    check_transformed(
+        """\
+        from django.utils import timezone
+        from datetime import datetime
+
+        timezone.make_aware(datetime.now(), timezone.utc)
+        timezone.make_aware(datetime.now(), timezone=timezone.utc)
+        """,
+        """\
+        from django.utils import timezone
+        from datetime import datetime
+
+        timezone.localtime(timezone.utc)
+        timezone.localtime(timezone=timezone.utc)
+        """,
+        settings,
+    )
+
+
+def test_transform_redundant_default_timezone_make_aware_kwarg():
+    check_transformed(
+        """\
+        from django.utils import timezone
+        from django.utils.timezone import get_current_timezone
+        from datetime import datetime
+
+        timezone.localtime(dt.datetime(2023,1,1), timezone=get_current_timezone())
+        """,
+        """\
+        from django.utils import timezone
+        from django.utils.timezone import get_current_timezone
+        from datetime import datetime
+
+        timezone.localtime(dt.datetime(2023,1,1))
+        """,
+        settings,
+    )
+
+
+def test_transform_redundant_default_timezone_make_aware_arg():
+    check_transformed(
+        """\
+        from django.utils import timezone
+        from datetime import datetime
+
+        timezone.make_aware(
+            dt.datetime(2023,1,1),
+            timezone=timezone.get_current_timezone()
+        )
+        """,
+        """\
+        from django.utils import timezone
+        from datetime import datetime
+
+        timezone.make_aware(
+            dt.datetime(2023,1,1)
+        )
+        """,
+        settings,
+    )
+
+
+def test_transform_localtime_all_redondant():
+    check_transformed(
+        """\
+        from django.utils import timezone
+
+        timezone.localtime(timezone.now(), timezone=timezone.get_current_timezone())
+        timezone.localdate(timezone.now(), timezone=timezone.get_current_timezone())
+        """,
+        """\
+        from django.utils import timezone
+
+        timezone.localtime()
+        timezone.localdate()
+        """,
+        settings,
+    )
+
+
+def test_transform_make_aware_all_redondant():
+    check_transformed(
+        """\
+        from django.utils import timezone
+        from datetime import datetime
+
+        timezone.make_aware(datetime.now(), timezone=timezone.get_current_timezone())
         """,
         """\
         from django.utils import timezone
