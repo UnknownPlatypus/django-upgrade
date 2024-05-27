@@ -21,9 +21,7 @@ fixer = Fixer(
 
 def model_arg_sort_func(x: str | None) -> int:
     """Sort keyword list based on a reference index list"""
-    if x in MODEL_FIELD_ARG_ORDER:
-        return MODEL_FIELD_ARG_ORDER.index(x)
-    return 100
+    return MODEL_FIELD_ARG_ORDER.get(x, 100)
 
 
 @fixer.register(ast.Call)

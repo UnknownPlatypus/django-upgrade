@@ -171,8 +171,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         output = output_dict[versions_to_keep.pop()]
 
+    lookup_dict = dict(zip(output, range(len(output))))
+
     with open(_DJANGO_FIELD_ORDER_CONST_FILE, "w") as f:
-        f.write(f"from __future__ import annotations\nMODEL_FIELD_ARG_ORDER={output}")
+        f.write(
+            f"from __future__ import annotations\nMODEL_FIELD_ARG_ORDER={lookup_dict}"
+        )
 
     print("Formatting using black...")
     subprocess.run(
