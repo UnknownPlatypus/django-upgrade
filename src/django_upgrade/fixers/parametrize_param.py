@@ -5,8 +5,8 @@ Use multiple `pytest.param(..., id=...)` over `ids=[...]`
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from functools import partial
-from typing import Iterable
 from typing import cast
 
 from tokenize_rt import Offset
@@ -36,7 +36,7 @@ fixer = Fixer(
 def visit_Call(
     state: State,
     node: ast.Call,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         state.looks_like_test_file

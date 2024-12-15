@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 import re
 from collections import defaultdict
-from typing import Sequence
+from collections.abc import Sequence
 from typing import cast
 
 from tokenize_rt import NON_CODING_TOKENS
@@ -603,10 +603,7 @@ def reorder_call_kwargs(
                 comment_idx := find_until(tokens, start, end=end, name=COMMENT)
             ):
                 # Capture possible trailing comments from previous arg
-                if (
-                    comment_idx is not None
-                    and tokens[comment_idx].line == tokens[func_kwargs[i - 1][1]].line
-                ):
+                if tokens[comment_idx].line == tokens[func_kwargs[i - 1][1]].line:
                     comment_start_idx = reverse_consume(
                         tokens, comment_idx, name=UNIMPORTANT_WS
                     )

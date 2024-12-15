@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from functools import partial
-from typing import Iterable
 
 from tokenize_rt import Offset
 
@@ -28,7 +28,7 @@ def model_arg_sort_func(x: str | None) -> int:
 def visit_Call(
     state: State,
     node: ast.Call,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if state.looks_like_models_file:
         if len(node.keywords) > 1:

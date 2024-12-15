@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from functools import partial
-from typing import Iterable
 
 from tokenize_rt import Offset
 from tokenize_rt import Token
@@ -49,7 +49,7 @@ def has_default_timezone(node: ast.Call, state: State) -> bool:
 def visit_Call(
     state: State,
     node: ast.Call,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if is_name_attr(
         node=node.func,

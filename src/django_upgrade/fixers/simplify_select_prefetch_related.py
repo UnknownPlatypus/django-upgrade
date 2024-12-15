@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from functools import partial
-from typing import Dict
-from typing import Iterable
 
 from tokenize_rt import Offset
 from tokenize_rt import Token
@@ -22,14 +21,14 @@ fixer = Fixer(
     min_version=(0, 0),
 )
 
-NestedDict = Dict[str, "NestedDict"]
+NestedDict = dict[str, "NestedDict"]
 
 
 @fixer.register(ast.Call)
 def visit_Call(
     state: State,
     node: ast.Call,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         isinstance(node.func, ast.Attribute)

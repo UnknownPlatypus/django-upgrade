@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from tokenize_rt import Offset
 from tokenize_rt import Token
@@ -24,7 +24,7 @@ fixer = Fixer(
 def visit_Call(
     state: State,
     node: ast.Call,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         isinstance(node.func, ast.Name)

@@ -3,8 +3,8 @@ from __future__ import annotations
 import ast
 import enum
 from collections import defaultdict
+from collections.abc import Iterable
 from functools import partial
-from typing import Iterable
 
 from tokenize_rt import Offset
 from tokenize_rt import Token
@@ -98,7 +98,7 @@ def _looks_like_manager_instanciation(element: ast.AST) -> bool:
 
 
 def get_element_type_with_lineno(
-    element: ast.AST,
+    element: ast.stmt,
 ) -> tuple[ContentType, int]:
     if (
         isinstance(element, (ast.Assign, ast.AnnAssign))
@@ -143,7 +143,7 @@ def get_element_type_with_lineno(
 def visit_ClassDef(
     state: State,
     node: ast.ClassDef,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         isinstance(parents[-1], ast.Module)
