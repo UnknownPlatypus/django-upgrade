@@ -6,9 +6,9 @@ https://docs.djangoproject.com/en/stable/releases/1.9/#features-deprecated-in-1-
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
+from collections.abc import MutableMapping
 from functools import partial
-from typing import Iterable
-from typing import MutableMapping
 from weakref import WeakKeyDictionary
 
 from tokenize_rt import Offset
@@ -35,7 +35,7 @@ fixer = Fixer(
 def visit_ImportFrom(
     state: State,
     node: ast.ImportFrom,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         node.module == "django.db.models"
@@ -70,7 +70,7 @@ def update_django_models_import(
 def visit_Call(
     state: State,
     node: ast.Call,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         (

@@ -6,8 +6,8 @@ https://docs.djangoproject.com/en/2.2/releases/2.2/#features-deprecated-in-2-2
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from functools import partial
-from typing import Iterable
 
 from tokenize_rt import Offset
 from tokenize_rt import Token
@@ -38,7 +38,7 @@ OLD_NAME = "FixedOffset"
 def visit_ImportFrom(
     state: State,
     node: ast.ImportFrom,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         node.module == MODULE
@@ -58,7 +58,7 @@ def fix_import_from(tokens: list[Token], i: int, *, node: ast.ImportFrom) -> Non
 def visit_Call(
     state: State,
     node: ast.Call,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         OLD_NAME in state.from_imports[MODULE]

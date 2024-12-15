@@ -8,9 +8,9 @@ https://docs.djangoproject.com/en/4.1/releases/4.1/#tests
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from functools import partial
 from typing import Any
-from typing import Iterable
 
 from tokenize_rt import UNIMPORTANT_WS
 from tokenize_rt import Offset
@@ -41,7 +41,7 @@ fixer = Fixer(
 def visit_Call(
     state: State,
     node: ast.Call,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         isinstance(node.func, ast.Attribute)
@@ -161,8 +161,7 @@ class ResponseAssignmentVisitor(ast.NodeVisitor):
 
     def visit_Assign(self, node: ast.Assign) -> Any:
         if (
-            isinstance(node, ast.Assign)
-            and len(node.targets) == 1
+            len(node.targets) == 1
             and isinstance(node.targets[0], ast.Name)
             and node.targets[0].id == self.name
             and (
@@ -179,7 +178,7 @@ class ResponseAssignmentVisitor(ast.NodeVisitor):
 
 
 def is_response_from_client(
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
     node: ast.Call,
     name: str,
 ) -> bool:

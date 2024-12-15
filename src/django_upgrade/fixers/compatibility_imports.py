@@ -17,10 +17,10 @@ from __future__ import annotations
 
 import ast
 from collections import defaultdict
+from collections.abc import Iterable
+from collections.abc import Mapping
 from functools import lru_cache
 from functools import partial
-from typing import Iterable
-from typing import Mapping
 
 from tokenize_rt import Offset
 
@@ -59,7 +59,7 @@ REPLACEMENTS_EXACT = {
         "django.contrib.staticfiles.templatetags.staticfiles": {
             "static": "django.templatetags.static",
         },
-        "django.core.urlresolvers": {
+        "django.core.urlresolvers": dict.fromkeys(
             # Objects moved from django.core.resolvers to django.urls in
             # Django 1.10:
             # https://github.com/django/django/blob/stable/1.10.x/django/urls/__init__.py
@@ -67,8 +67,7 @@ REPLACEMENTS_EXACT = {
             # 2.0: RegexURLPattern, LocaleRegexURLResolver, RegexURLResolver
             # and LocaleRegexProvider. See:
             # https://github.com/django/django/pull/7482#discussion_r121311884
-            name: "django.urls"
-            for name in (
+            (
                 "NoReverseMatch",
                 "Resolver404",
                 "ResolverMatch",
@@ -87,8 +86,9 @@ REPLACEMENTS_EXACT = {
                 "set_script_prefix",
                 "set_urlconf",
                 "translate_url",
-            )
-        },
+            ),
+            "django.urls",
+        ),
     },
     (1, 11): {
         "django.db.models.fields": {
@@ -166,7 +166,7 @@ def _get_replacements(
 def visit_ImportFrom(
     state: State,
     node: ast.ImportFrom,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if not is_rewritable_import_from(node) or node.module is None:
         return

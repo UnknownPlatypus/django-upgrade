@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import sys
 from functools import partial
-
-import pytest
 
 from django_upgrade.data import Settings
 from tests.fixers import tools
@@ -61,6 +58,20 @@ def test_already_using_decorator_registration():
         @admin.register(Author)
         class AuthorAdmin(admin.ModelAdmin):
             pass
+        """,
+    )
+
+
+def test_register_assigned():
+    check_noop(
+        """\
+        from django.contrib import admin
+        from myapp.models import Author
+
+        class AuthorAdmin(admin.ModelAdmin):
+            pass
+
+        value = admin.site.register(Author, AuthorAdmin)
         """,
     )
 
@@ -368,7 +379,6 @@ def test_rewrite_class_decorator_multiple():
     )
 
 
-@pytest.mark.skipif(sys.version_info < (3, 9), reason="Python 3.9+ PEP 614 decorators")
 def test_rewrite_class_decorator_multiline():
     check_transformed(
         """\
@@ -665,6 +675,75 @@ def test_multiple_model_mixed_registration():
         class MyCustomAdmin:
             pass
 
+        """,
+    )
+
+
+def test_duplicate_model_admins_register_one():
+    check_noop(
+        """\
+        from django.contrib import admin
+
+        class BookAdmin(admin.ModelAdmin):
+            pass
+
+        admin.site.register(Book, BookAdmin)
+
+        class BookAdmin(admin.ModelAdmin):
+            pass
+        """,
+    )
+
+
+def test_duplicate_model_admins_register_two():
+    check_noop(
+        """\
+        from django.contrib import admin
+
+        class BookAdmin(admin.ModelAdmin):
+            pass
+
+        class BookAdmin(admin.ModelAdmin):
+            pass
+
+        admin.site.register(Book, BookAdmin)
+        """,
+    )
+
+
+def test_duplicate_model_admins_with_intermediate():
+    check_transformed(
+        """\
+        from django.contrib import admin
+
+        class BookAdmin(admin.ModelAdmin):
+            pass
+
+        class DuckAdmin(admin.ModelAdmin):
+            pass
+
+        admin.site.register(Duck, DuckAdmin)
+
+        class BookAdmin(admin.ModelAdmin):
+            pass
+
+        admin.site.register(Book, BookAdmin)
+        """,
+        """\
+        from django.contrib import admin
+
+        class BookAdmin(admin.ModelAdmin):
+            pass
+
+        @admin.register(Duck)
+        class DuckAdmin(admin.ModelAdmin):
+            pass
+
+
+        class BookAdmin(admin.ModelAdmin):
+            pass
+
+        admin.site.register(Book, BookAdmin)
         """,
     )
 

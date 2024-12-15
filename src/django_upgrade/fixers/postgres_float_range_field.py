@@ -6,8 +6,8 @@ https://docs.djangoproject.com/en/2.2/releases/2.2/#features-deprecated-in-2-2
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from functools import partial
-from typing import Iterable
 
 from tokenize_rt import Offset
 
@@ -39,7 +39,7 @@ NAME_MAP = {
 def visit_ImportFrom(
     state: State,
     node: ast.ImportFrom,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         node.module in MODULES
@@ -55,7 +55,7 @@ def visit_ImportFrom(
 def visit_Name(
     state: State,
     node: ast.Name,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (name := node.id) in NAME_MAP and any(
         name in state.from_imports[m] for m in MODULES

@@ -22,10 +22,6 @@ OP = "OP"
 PHYSICAL_NEWLINE = "NL"
 STRING = "STRING"
 
-
-BRACES = {"(": ")", "[": "]", "{": "}"}
-OPENING, CLOSING = frozenset(BRACES), frozenset(BRACES.values())
-
 # Basic functions
 
 
@@ -82,7 +78,9 @@ def reverse_consume(
     return i
 
 
-def find_first_token(tokens: list[Token], i: int, *, node: ast.AST) -> int:
+def find_first_token(
+    tokens: list[Token], i: int, *, node: ast.expr | ast.keyword | ast.stmt
+) -> int:
     """
     Find the first token corresponding to the given ast node.
     """
@@ -96,7 +94,9 @@ def find_first_token(tokens: list[Token], i: int, *, node: ast.AST) -> int:
     return i
 
 
-def find_last_token(tokens: list[Token], i: int, *, node: ast.AST) -> int:
+def find_last_token(
+    tokens: list[Token], i: int, *, node: ast.expr | ast.keyword | ast.stmt
+) -> int:
     """
     Find the last token corresponding to the given ast node.
     """
@@ -133,7 +133,7 @@ def reverse_consume_non_semantic_elements(tokens: list[Token], i: int) -> int:
 
 def extract_indent(tokens: list[Token], i: int) -> tuple[int, str]:
     """
-    If the previous token is and indent, return its position and the
+    If the previous token is an indent, return its position and the
     indentation string. Otherwise return the current position and "".
     """
     if i > 0 and tokens[i - 1].name in (INDENT, UNIMPORTANT_WS):
@@ -157,6 +157,11 @@ def alone_on_line(tokens: list[Token], start_idx: int, end_idx: int) -> bool:
 
 
 # More complex mini-parsers
+
+BRACES = {"(": ")", "[": "]", "{": "}"}
+OPENING, CLOSING = frozenset(BRACES), frozenset(BRACES.values())
+
+
 def parse_call_args(
     tokens: list[Token],
     i: int,
@@ -366,9 +371,11 @@ def replace(tokens: list[Token], i: int, *, src: str) -> None:
     tokens[i] = tokens[i]._replace(name=CODE, src=src)
 
 
-def erase_node(tokens: list[Token], i: int, *, node: ast.AST) -> None:
+def find_node(
+    tokens: list[Token], i: int, *, node: ast.expr | ast.keyword | ast.stmt
+) -> tuple[int, int]:
     """
-    Erase all tokens corresponding to the given ast node.
+    Return bounds of tokens corresponding to the given node, minus any indent.
     """
     j = find_last_token(tokens, i, node=node)
     if tokens[j + 1].name == UNIMPORTANT_WS:
@@ -378,6 +385,26 @@ def erase_node(tokens: list[Token], i: int, *, node: ast.AST) -> None:
     if tokens[j + 1].name == LOGICAL_NEWLINE:  # pragma: no branch
         j += 1
     i, _ = extract_indent(tokens, i)
+    return (i, j)
+
+
+def erase_node(
+    tokens: list[Token], i: int, *, node: ast.expr | ast.keyword | ast.stmt
+) -> None:
+    """
+    Erase all tokens corresponding to the given node.
+    """
+    i, j = find_node(tokens, i, node=node)
+    del tokens[i : j + 1]
+
+
+def erase_decorator(tokens: list[Token], i: int, *, node: ast.Call) -> None:
+    """
+    Specialized version of erase_node for removing decorators, since they don't
+    include the @ in their bounds.
+    """
+    i, j = find_node(tokens, i, node=node)
+    i = reverse_find(tokens, i, name=OP, src="@")
     del tokens[i : j + 1]
 
 

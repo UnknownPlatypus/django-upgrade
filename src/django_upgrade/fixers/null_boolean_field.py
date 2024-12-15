@@ -6,8 +6,8 @@ https://docs.djangoproject.com/en/3.1/releases/3.1/#features-deprecated-in-3-1
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from functools import partial
-from typing import Iterable
 
 from tokenize_rt import Offset
 from tokenize_rt import Token
@@ -35,7 +35,7 @@ fixer = Fixer(
 def visit_ImportFrom(
     state: State,
     node: ast.ImportFrom,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if is_rewritable_import_from(node) and node.module == "django.db.models":
         yield ast_start_offset(node), partial(
@@ -49,7 +49,7 @@ def visit_ImportFrom(
 def visit_Call(
     state: State,
     node: ast.Call,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         isinstance(node.func, ast.Name)

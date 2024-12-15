@@ -2,6 +2,93 @@
 Changelog
 =========
 
+1.22.2 (2024-12-02)
+-------------------
+
+* Make these fixers work when ``django.contrib.gis.db.models`` is used to import objects from ``django.db.models``:
+
+  *  ``check_constraint_condition``
+  *  ``index_together``
+
+  `Issue #513 <https://github.com/adamchainz/django-upgrade/issues/513>`__.
+
+1.22.1 (2024-10-11)
+-------------------
+
+* Fix circular import error when running django-upgrade.
+
+  Thanks to Michal Čihař for the report in `Issue #503 <https://github.com/adamchainz/django-upgrade/issues/503>`__.
+
+1.22.0 (2024-10-10)
+-------------------
+
+* Avoid accidental removal of comments a removed ``if`` block in the versioned block fixer.
+
+  Thanks to Tobias Funke for the report in `Issue #495 <https://github.com/adamchainz/django-upgrade/issues/495>`__.
+
+* Add all-version fixer to remove outdated test skip decorators.
+
+  `Issue #364 <https://github.com/adamchainz/django-upgrade/issues/364>`__.
+
+* Drop Python 3.8 support.
+
+* Support Python 3.13.
+
+1.21.0 (2024-09-05)
+-------------------
+
+* Add Django 5.0+ fixer to rewrite ``format_html()`` calls without ``args`` or ``kwargs`` probably using ``str.format()`` incorrectly.
+
+  `Issue #477 <https://github.com/adamchainz/django-upgrade/issues/477>`__.
+
+1.20.0 (2024-07-19)
+-------------------
+
+* Fix the ``admin_register`` fixer to avoid rewriting when there are duplicate ``ModelAdmin`` classes in the file.
+
+  `Issue #471 <https://github.com/adamchainz/django-upgrade/issues/471>`__.
+
+1.19.0 (2024-06-27)
+-------------------
+
+* Add Django 4.2+ fixer to rewrite ``index_together`` declarations into ``indexes`` declarations in model ``Meta`` classes.
+  This fixer can make changes that require migrations.
+  Add a `test for pending migrations <https://adamj.eu/tech/2024/06/23/django-test-pending-migrations/>`__ to ensure that you do not miss these.
+
+  `PR #464 <https://github.com/adamchainz/django-upgrade/pull/464>`__.
+
+* Fix tracking of AST node parents.
+  This may have fixed some subtle bugs in these fixers:
+
+  * ``admin_register``
+  * ``assert_form_error``
+  * ``default_app_config``
+  * ``management_commands``
+  * ``request_headers``
+  * ``settings_database_postgresql``
+  * ``settings_storages``
+  * ``testcase_databases``
+  * ``use_l10n``
+  * ``utils_timezone``
+
+  If you see any new changes, or had them previously disabled, please report an issue so we can extra tests to the test suite.
+
+  `PR #465 <https://github.com/adamchainz/django-upgrade/pull/465>`__.
+
+1.18.0 (2024-05-28)
+-------------------
+
+* Support Django 5.1 as a target version.
+
+* Add Django 5.1+ fixer to rewrite the ``check`` keyword argument of ``CheckConstraint`` to ``condition``.
+
+1.17.0 (2024-05-10)
+-------------------
+
+* Add fixer selection options: ``--only <name>``, ``--skip <name>``, and ``--list-fixers``.
+
+  Thanks to Gav O'Connor and David Szotten in `PR #443 <https://github.com/adamchainz/django-upgrade/pull/443>`__.
+
 * Run per-file conditions once, yielding a performance improvement of ~2% measured on a real-world project.
 
 1.16.0 (2024-02-11)

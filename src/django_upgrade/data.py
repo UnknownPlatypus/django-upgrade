@@ -4,14 +4,12 @@ import ast
 import pkgutil
 import re
 from collections import defaultdict
+from collections.abc import Iterable
 from functools import cached_property
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import DefaultDict
-from typing import Iterable
-from typing import List
-from typing import Tuple
 from typing import TypeVar
 
 from tokenize_rt import Offset
@@ -21,10 +19,24 @@ from django_upgrade import fixers
 
 
 class Settings:
-    __slots__ = ("target_version",)
+    __slots__ = (
+        "target_version",
+        "enabled_fixers",
+    )
 
-    def __init__(self, target_version: tuple[int, int]) -> None:
+    def __init__(
+        self,
+        target_version: tuple[int, int],
+        only_fixers: set[str] | None = None,
+        skip_fixers: set[str] | None = None,
+    ) -> None:
         self.target_version = target_version
+        self.enabled_fixers = {
+            name
+            for name in FIXERS
+            if (only_fixers is None or name in only_fixers)
+            and (skip_fixers is None or name not in skip_fixers)
+        }
 
 
 admin_re = re.compile(r"(\b|_)admin(\b|_)")
@@ -79,8 +91,10 @@ class State:
 
 
 AST_T = TypeVar("AST_T", bound=ast.AST)
-TokenFunc = Callable[[List[Token], int], None]
-ASTFunc = Callable[[State, AST_T, List[ast.AST]], Iterable[Tuple[Offset, TokenFunc]]]
+TokenFunc = Callable[[list[Token], int], None]
+ASTFunc = Callable[
+    [State, AST_T, tuple[ast.AST, ...]], Iterable[tuple[Offset, TokenFunc]]
+]
 
 if TYPE_CHECKING:  # pragma: no cover
     from typing import Protocol
@@ -101,22 +115,17 @@ def visit(
     settings: Settings,
     filename: str,
 ) -> dict[Offset, list[TokenFunc]]:
-    initial_state = State(
+    state = State(
         settings=settings,
         filename=filename,
         from_imports=defaultdict(set),
     )
-    ast_funcs = get_ast_funcs(initial_state)
+    ast_funcs = get_ast_funcs(state, settings)
 
-    nodes: list[tuple[State, ast.AST, ast.AST]] = [(initial_state, tree, tree)]
-    parents: list[ast.AST] = [tree]
+    nodes: list[tuple[ast.AST, tuple[ast.AST, ...]]] = [(tree, ())]
     ret = defaultdict(list)
     while nodes:
-        state, node, parent = nodes.pop()
-        if len(parents) > 1 and parent == parents[-2]:
-            parents.pop()
-        elif parent != parents[-1]:
-            parents.append(parent)
+        node, parents = nodes.pop()
 
         for ast_func in ast_funcs[type(node)]:
             for offset, token_func in ast_func(state, node, parents):
@@ -133,34 +142,39 @@ def visit(
                 if name.asname is None and name.name != "*"
             )
 
+        subparents = parents + (node,)
         for name in reversed(node._fields):
             value = getattr(node, name)
-            next_state = state
 
             if isinstance(value, ast.AST):
-                nodes.append((next_state, value, node))
+                nodes.append((value, subparents))
             elif isinstance(value, list):
                 for subvalue in reversed(value):
                     if isinstance(subvalue, ast.AST):
-                        nodes.append((next_state, subvalue, node))
+                        nodes.append((subvalue, subparents))
     return ret
 
 
 class Fixer:
-    __slots__ = ("name", "min_version", "ast_funcs", "condition")
+    __slots__ = (
+        "name",
+        "min_version",
+        "ast_funcs",
+        "condition",
+    )
 
     def __init__(
         self,
-        name: str,
+        module_name: str,
         min_version: tuple[int, int],
         condition: Callable[[State], bool] | None = None,
     ) -> None:
-        self.name = name
+        self.name = module_name.rpartition(".")[2]
         self.min_version = min_version
         self.ast_funcs: ASTCallbackMapping = defaultdict(list)
         self.condition = condition
 
-        FIXERS.append(self)
+        FIXERS[self.name] = self
 
     def register(
         self, type_: type[AST_T]
@@ -172,12 +186,12 @@ class Fixer:
         return decorator
 
 
-FIXERS: list[Fixer] = []
+FIXERS: dict[str, Fixer] = {}
 
 
 def _import_fixers() -> None:
     # https://github.com/python/mypy/issues/1422
-    fixers_path: str = fixers.__path__  # type: ignore
+    fixers_path: str = fixers.__path__  # type: ignore [assignment]
     mod_infos = pkgutil.walk_packages(fixers_path, f"{fixers.__name__}.")
     for _, name, _ in mod_infos:
         __import__(name, fromlist=["_trash"])
@@ -186,9 +200,11 @@ def _import_fixers() -> None:
 _import_fixers()
 
 
-def get_ast_funcs(state: State) -> ASTCallbackMapping:
+def get_ast_funcs(state: State, settings: Settings) -> ASTCallbackMapping:
     ast_funcs: ASTCallbackMapping = defaultdict(list)
-    for fixer in FIXERS:
+    for fixer in FIXERS.values():
+        if fixer.name not in settings.enabled_fixers:
+            continue
         if fixer.min_version <= state.settings.target_version and (
             fixer.condition is None or fixer.condition(state)
         ):

@@ -6,8 +6,8 @@ https://docs.djangoproject.com/en/4.0/releases/4.0/#localization
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from functools import partial
-from typing import Iterable
 
 from tokenize_rt import Offset
 
@@ -28,7 +28,7 @@ fixer = Fixer(
 def visit_Assign(
     state: State,
     node: ast.Assign,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         len(node.targets) == 1

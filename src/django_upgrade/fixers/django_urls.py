@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import ast
 import re
+from collections.abc import Iterable
+from collections.abc import MutableMapping
 from functools import partial
-from typing import Iterable
-from typing import MutableMapping
 from weakref import WeakKeyDictionary
 
 from tokenize_rt import Offset
@@ -17,8 +17,6 @@ from tokenize_rt import Token
 
 from django_upgrade.ast import ast_start_offset
 from django_upgrade.ast import is_rewritable_import_from
-from django_upgrade.compat import str_removeprefix
-from django_upgrade.compat import str_removesuffix
 from django_upgrade.data import Fixer
 from django_upgrade.data import State
 from django_upgrade.data import TokenFunc
@@ -40,7 +38,7 @@ fixer = Fixer(
 def visit_ImportFrom(
     state: State,
     node: ast.ImportFrom,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         node.module == "django.conf.urls"
@@ -90,7 +88,7 @@ def update_django_conf_import(
             tokens,
             i,
             node=node,
-            name_map={name: "" for name in removals},
+            name_map=dict.fromkeys(removals, ""),
         )
         if not re_path_imported:
             joined_names = ", ".join(sorted(added_names))
@@ -136,7 +134,7 @@ def update_django_urls_import(
 def visit_Call(
     state: State,
     node: ast.Call,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if isinstance(node.func, ast.Name):
         if (
@@ -217,8 +215,8 @@ REGEX_TO_CONVERTER = {
 def convert_path_syntax(regex_path: str, include_called: bool) -> str | None:
     if not (regex_path.endswith("$") or include_called):
         return None
-    remaining = str_removeprefix(regex_path, "^")
-    remaining = str_removesuffix(remaining, "$")
+    remaining = regex_path.removeprefix("^")
+    remaining = remaining.removesuffix("$")
     path = ""
     while "(?P<" in remaining:
         prefix, rest = remaining.split("(?P<", 1)

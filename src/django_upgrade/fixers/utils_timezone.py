@@ -6,9 +6,9 @@ https://docs.djangoproject.com/en/4.1/releases/4.1/#id2
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
+from collections.abc import MutableMapping
 from functools import partial
-from typing import Iterable
-from typing import MutableMapping
 from weakref import WeakKeyDictionary
 
 from tokenize_rt import Offset
@@ -31,7 +31,7 @@ fixer = Fixer(
 def visit_Name(
     state: State,
     node: ast.Name,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         node.id == "utc"
@@ -50,15 +50,15 @@ def visit_Name(
 def visit_Attribute(
     state: State,
     node: ast.Attribute,
-    parents: list[ast.AST],
+    parents: tuple[ast.AST, ...],
 ) -> Iterable[tuple[Offset, TokenFunc]]:
     if (
         node.attr == "utc"
         and isinstance(node.value, ast.Name)
         and node.value.id == "timezone"
         and "timezone" in state.from_imports["django.utils"]
-        and (details := get_import_details(state, parents[0]))
-        and details.datetime_module is not None
+        and (details := get_import_details(state, parents[0])).datetime_module
+        is not None
     ):
         new_src = f"{details.datetime_module}.timezone"
         yield ast_start_offset(node), partial(replace, src=new_src)
