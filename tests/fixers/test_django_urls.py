@@ -426,6 +426,24 @@ def test_path_uuid_converter():
     )
 
 
+def test_path_implicit_string_concatenation():
+    check_transformed(
+        """\
+        from django.conf.urls import url
+
+        url(r'^page/(?P<number>\\d+)/'
+            r'view/$',
+            views.page)
+        """,
+        """\
+        from django.urls import path
+
+        path('page/<int:number>/view/',
+            views.page)
+        """,
+    )
+
+
 def test_complete():
     check_transformed(
         """\
@@ -494,6 +512,27 @@ def test_re_path_unanchored_start():
         from django.urls import path
 
         path('about/', views.about)
+        """,
+    )
+
+
+def test_re_path_indented():
+    check_transformed(
+        """\
+        from django.urls import re_path
+
+        re_path(
+            r"^about/$",
+            views.about,
+        )
+        """,
+        """\
+        from django.urls import path
+
+        path(
+            "about/",
+            views.about,
+        )
         """,
     )
 

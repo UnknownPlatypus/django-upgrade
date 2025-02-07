@@ -2,6 +2,31 @@
 Changelog
 =========
 
+1.23.1 (2025-02-07)
+-------------------
+
+* Fix ``django_url`` fixer bug that failed for indented path strings.
+  This bug was introduced in 1.23.0.
+
+  Thanks to Michal Čihař for the report in `Issue #528 <https://github.com/adamchainz/django-upgrade/issues/528>`__.
+
+1.23.0 (2025-02-06)
+-------------------
+
+* Support Django 5.2 in ``--target-version``.
+
+* Extend versioned block fixer to support comparisons with single-item tuples, like `django.VERSION >= (4,)`.
+
+  Thanks to Thibaut Decombe in `PR #517 <https://github.com/adamchainz/django-upgrade/pull/517>`__.
+
+* Fix test decorator fixer to remove all indentation tokens from the decorator line.
+
+  Thanks to Thibaut Decombe in `PR #518 <https://github.com/adamchainz/django-upgrade/pull/518>`__.
+
+* Fix ``django_url`` fixer handling of implicitly concatenated strings.
+
+  Thanks to Gunther Waidacher for the report in `Issue #524 <https://github.com/adamchainz/django-upgrade/issues/524>`__.
+
 1.22.2 (2024-12-02)
 -------------------
 

@@ -37,6 +37,7 @@ TARGET_VERSION_CHOICES = [
     "4.2",
     "5.0",
     "5.1",
+    "5.2",
 ]
 
 
@@ -47,6 +48,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--target-version",
         default="2.2",
         choices=TARGET_VERSION_CHOICES,
+        help="The version of Django to target.",
     )
     parser.add_argument(
         "--exit-zero-even-if-changed",
