@@ -35,6 +35,7 @@ def visit_Call(
         and node.func.attr == "strptime"
         and len(node.args) == 2
         and isinstance(node.args[1], ast.Constant)
+        and isinstance(node.args[1].value, str)
         and is_name_attr(
             node=node.func.value,
             imports=state.from_imports,

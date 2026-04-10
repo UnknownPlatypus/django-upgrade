@@ -44,6 +44,7 @@ def visit_Call(
                     )
         elif (
             isinstance((related_model := node.args[0]), ast.Constant)
+            and isinstance(related_model.value, str)
             and related_model.value != "self"
             and "." not in related_model.value
             and "/models" in state.filename

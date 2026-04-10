@@ -41,25 +41,30 @@ class NV(ast.NodeVisitor):
             self.args_by_field = {
                 item.value: []
                 for item in item_list
-                if isinstance(item, ast.Constant) and item.value.endswith("Field")
+                if isinstance(item, ast.Constant)
+                and isinstance(item.value, str)
+                and item.value.endswith("Field")
             }
 
         self.generic_visit(node)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        if node.name.endswith("Field") and any(
-            isinstance(body_node, ast.FunctionDef)
-            and (target_node := body_node).name == "__init__"
-            for body_node in node.body
+        if (
+            node.name.endswith("Field")
+            and any(
+                isinstance(body_node, ast.FunctionDef)
+                and (target_node := body_node).name == "__init__"
+                for body_node in node.body
+            )
+            and node.name in self.args_by_field
         ):
-            if node.name in self.args_by_field:
-                self.args_by_field[node.name].extend(
-                    arg.arg
-                    for arg in target_node.args.args[1:]  # Skip "self" first argument
-                )
-                self.args_by_field[node.name].extend(
-                    arg.arg for arg in target_node.args.kwonlyargs
-                )
+            self.args_by_field[node.name].extend(
+                arg.arg
+                for arg in target_node.args.args[1:]  # Skip "self" first argument
+            )
+            self.args_by_field[node.name].extend(
+                arg.arg for arg in target_node.args.kwonlyargs
+            )
 
         self.generic_visit(node)
 
@@ -142,16 +147,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"Using cloned django at {_CLONE_TARGET_DIR}")
 
     output_dict = {}
-    for target_version, git_branch in zip(TARGET_VERSION_CHOICES, _get_branches()):
+    for target_version, git_branch in zip(SUPPORTED_TARGET_VERSIONS, _get_branches()):
         print(f"Git checkout {git_branch}...")
         subprocess.run(
             ["git", "checkout", git_branch], cwd=_CLONE_TARGET_DIR, check=True
         )
         print(f"Parsing model field args for {git_branch}...")
         args_by_field = parse_field_args()
-        output_dict[tuple(int(part) for part in target_version.split("."))] = (
-            get_ordered_full_kw_list(args_by_field)
-        )
+        output_dict[target_version] = get_ordered_full_kw_list(args_by_field)
 
     # Keep list only for non-backward compatible versions.
     versions_to_keep = set()

@@ -30,14 +30,17 @@ def visit_Call(
         and not node.keywords
         and len(node.args) > 1
         and any(
-            isinstance(arg, ast.Constant) and "__" in arg.value for arg in node.args
+            isinstance(arg, ast.Constant)
+            and isinstance(arg.value, str)
+            and "__" in arg.value
+            for arg in node.args
         )
     ):
         fields = sorted(
             (
                 (arg.value, idx)
                 for idx, arg in enumerate(node.args)
-                if isinstance(arg, ast.Constant)
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str)
             ),
             key=lambda k: len(k[0]),
             reverse=True,

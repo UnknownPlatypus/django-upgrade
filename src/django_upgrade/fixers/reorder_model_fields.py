@@ -249,7 +249,7 @@ def reorder_class_body(
     new_tokens = []
     nb_blocks = len(element_types_to_tokens)
     for idx, (_, el_type_tokens) in enumerate(sorted(element_types_to_tokens.items())):
-        if el_type_tokens[-1].name != PHYSICAL_NEWLINE and not idx + 1 == nb_blocks:
+        if el_type_tokens[-1].name != PHYSICAL_NEWLINE and idx + 1 != nb_blocks:
             # Ensure we have a trailing newline for every block (except the last one).
             el_type_tokens.append(_PHYSICAL_NEWLINE_TOKEN)
         new_tokens.extend(el_type_tokens)

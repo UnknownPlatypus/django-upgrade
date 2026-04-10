@@ -60,7 +60,9 @@ def visit_Call(
                 pytest_argnames=node.args[0],
                 pytest_argvalues=node.args[1],
                 ids_node_idx=len(node.args) + node.keywords.index(ids_node),
-                ids_values=[cast(ast.Constant, el).value for el in ids_node.value.elts],
+                ids_values=[
+                    str(cast(ast.Constant, el).value) for el in ids_node.value.elts
+                ],
             ),
         )
 
@@ -80,7 +82,7 @@ def update_parametrize_call(
     delete_argument(ids_node_idx, tokens, func_args)
 
     nb_argnames = len(
-        pytest_argnames.value.split(",")
+        str(pytest_argnames.value).split(",")
         if isinstance(pytest_argnames, ast.Constant)
         else pytest_argnames.elts
     )
