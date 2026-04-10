@@ -9,15 +9,11 @@ import ast
 from collections.abc import Iterable
 from functools import partial
 
-from tokenize_rt import Offset
-from tokenize_rt import Token
+from tokenize_rt import Offset, Token
 
 from django_upgrade.ast import ast_start_offset
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
-from django_upgrade.tokens import CODE
-from django_upgrade.tokens import find_last_token
+from django_upgrade.data import Fixer, State, TokenFunc
+from django_upgrade.tokens import CODE, find_last_token
 
 fixer = Fixer(
     __name__,
@@ -38,10 +34,11 @@ def visit_Assign(
         and isinstance(node.targets[0], ast.Name)
         and node.targets[0].id in ("allow_database_queries", "multi_db")
         and isinstance(node.value, ast.Constant)
-        and (node.value.value is True or node.value.value is False)
+        and isinstance(node.value.value, bool)
     ):
-        yield ast_start_offset(node), partial(
-            replace_assignment, node=node, value=node.value.value
+        yield (
+            ast_start_offset(node),
+            partial(replace_assignment, node=node, value=node.value.value),
         )
 
 

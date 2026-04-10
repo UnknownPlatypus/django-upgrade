@@ -9,23 +9,18 @@ import ast
 from collections.abc import Iterable
 from functools import partial
 
-from tokenize_rt import Offset
-from tokenize_rt import Token
+from tokenize_rt import Offset, Token
 
 from django_upgrade.ast import ast_start_offset
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
-from django_upgrade.tokens import NAME
-from django_upgrade.tokens import STRING
-from django_upgrade.tokens import find
-from django_upgrade.tokens import replace
-from django_upgrade.tokens import str_repr_matching
+from django_upgrade.data import Fixer, State, TokenFunc
+from django_upgrade.tokens import NAME, STRING, find, replace, str_repr_matching
 
 fixer = Fixer(
     __name__,
     min_version=(2, 2),
 )
+
+SPECIAL_HEADERS = frozenset({"CONTENT_LENGTH", "CONTENT_TYPE"})
 
 
 @fixer.register(ast.Subscript)
@@ -41,8 +36,9 @@ def visit_Subscript(
         and (meta_name := extract_constant(node.slice)) is not None
         and (header_name := get_header_name(meta_name)) is not None
     ):
-        yield ast_start_offset(node), partial(
-            rewrite_header_access, header_name=header_name
+        yield (
+            ast_start_offset(node),
+            partial(rewrite_header_access, header_name=header_name),
         )
 
 
@@ -61,8 +57,9 @@ def visit_Call(
         and isinstance(meta_name := node.args[0].value, str)
         and (header_name := get_header_name(meta_name)) is not None
     ):
-        yield ast_start_offset(node), partial(
-            rewrite_header_access, header_name=header_name
+        yield (
+            ast_start_offset(node),
+            partial(rewrite_header_access, header_name=header_name),
         )
 
 
@@ -78,10 +75,12 @@ def visit_Compare(
         and len(node.comparators) == 1
         and is_request_or_self_request_meta(node.comparators[0])
         and isinstance(node.left, ast.Constant)
+        and isinstance(node.left.value, str)
         and (header_name := get_header_name(node.left.value)) is not None
     ):
-        yield ast_start_offset(node), partial(
-            rewrite_in_statement, header_name=header_name
+        yield (
+            ast_start_offset(node),
+            partial(rewrite_in_statement, header_name=header_name),
         )
 
 
@@ -112,7 +111,7 @@ def get_header_name(meta_name: str) -> str | None:
     http_prefix = "HTTP_"
     if meta_name.startswith(http_prefix):
         name = meta_name[len(http_prefix) :]
-    elif meta_name in {"CONTENT_LENGTH", "CONTENT_TYPE"}:
+    elif meta_name in SPECIAL_HEADERS:
         name = meta_name
     else:
         return None

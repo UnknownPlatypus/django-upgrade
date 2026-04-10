@@ -1,54 +1,65 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
-import tokenize
 from collections.abc import Sequence
 from importlib import metadata
-from typing import Any
-from typing import cast
+from typing import Any, cast
 
-from tokenize_rt import UNIMPORTANT_WS
-from tokenize_rt import Token
-from tokenize_rt import reversed_enumerate
-from tokenize_rt import src_to_tokens
-from tokenize_rt import tokens_to_src
+from tokenize_rt import (
+    UNIMPORTANT_WS,
+    Token,
+    reversed_enumerate,
+    src_to_tokens,
+    tokens_to_src,
+)
 
 from django_upgrade.ast import ast_parse
-from django_upgrade.data import FIXERS
-from django_upgrade.data import Settings
-from django_upgrade.data import visit
+from django_upgrade.data import FIXERS, Settings, visit
 from django_upgrade.tokens import DEDENT
 
-TARGET_VERSION_CHOICES = [
-    "1.7",
-    "1.8",
-    "1.9",
-    "1.10",
-    "1.11",
-    "2.0",
-    "2.1",
-    "2.2",
-    "3.0",
-    "3.1",
-    "3.2",
-    "4.0",
-    "4.1",
-    "4.2",
-    "5.0",
-    "5.1",
-    "5.2",
-]
+SUPPORTED_TARGET_VERSIONS = {
+    (1, 7),
+    (1, 8),
+    (1, 9),
+    (1, 10),
+    (1, 11),
+    (2, 0),
+    (2, 1),
+    (2, 2),
+    (3, 0),
+    (3, 1),
+    (3, 2),
+    (4, 0),
+    (4, 1),
+    (4, 2),
+    (5, 0),
+    (5, 1),
+    (5, 2),
+    (6, 0),
+}
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="django-upgrade")
-    parser.add_argument("filenames", nargs="+")
+    parser.suggest_on_error = True
+    parser.add_argument(
+        "filenames", nargs="+", help="Filenames to fix, or '-' for stdin."
+    )
     parser.add_argument(
         "--target-version",
-        default="2.2",
-        choices=TARGET_VERSION_CHOICES,
+        default="auto",
+        choices=[
+            "auto",
+            *[f"{major}.{minor}" for major, minor in SUPPORTED_TARGET_VERSIONS],
+        ],
         help="The version of Django to target.",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Only output files to change, do not change files.",
     )
     parser.add_argument(
         "--exit-zero-even-if-changed",
@@ -79,13 +90,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    target_version: tuple[int, int] = cast(
-        tuple[int, int],
-        tuple(int(x) for x in args.target_version.split(".", 1)),
-    )
-
     settings = Settings(
-        target_version=target_version,
+        target_version=get_target_version(args.target_version),
         only_fixers=set(args.only) if args.only else None,
         skip_fixers=set(args.skip) if args.skip else None,
     )
@@ -96,6 +102,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             filename,
             settings,
             exit_zero_even_if_changed=args.exit_zero_even_if_changed,
+            check=args.check,
         )
 
     return ret
@@ -120,10 +127,88 @@ class ListFixersAction(argparse.Action):
         parser.exit()
 
 
+def get_target_version(string: str) -> tuple[int, int]:
+    default = (2, 2)
+    if string != "auto":
+        return cast(
+            tuple[int, int],
+            tuple(int(x) for x in string.split(".", 1)),
+        )
+
+    if sys.version_info < (3, 11):
+        return default
+
+    import tomllib
+
+    try:
+        with open("pyproject.toml", "rb") as fp:
+            config = tomllib.load(fp)
+    except FileNotFoundError:
+        return default
+
+    deps = config.get("project", {}).get("dependencies", [])
+    for dep in deps:
+        match = re.fullmatch(
+            r"""
+            django
+            \s*
+            (
+                \[[^]]+\]
+                \s*
+            )?
+            (?:==|~=|>=)
+            \s*
+            (
+                (?P<major>[0-9]+)
+                (
+                    \.
+                    (?P<minor>[0-9]+)
+                )?
+                (
+                    (?:a|b|rc)
+                    [0-9]+
+                |
+                    \.
+                    [0-9]+
+                |
+                )
+            )
+            (
+                \s*,\s*
+                (<|<=)
+                \s*
+                [0-9]+
+                (
+                    \.
+                    [0-9]+
+                    (
+                        \.
+                        [0-9]+
+                    )?
+                )?
+            )?
+            """,
+            dep.lower(),
+            re.VERBOSE,
+        )
+        if match:
+            major = int(match["major"])
+            minor = int(match["minor"] or 0)
+            if (major, minor) in SUPPORTED_TARGET_VERSIONS:
+                print(
+                    f"Detected Django version from pyproject.toml: {major}.{minor}",
+                    file=sys.stderr,
+                )
+                return (major, minor)
+
+    return default
+
+
 def fix_file(
     filename: str,
     settings: Settings,
     exit_zero_even_if_changed: bool,
+    check: bool,
 ) -> int:
     if filename == "-":
         contents_bytes = sys.stdin.buffer.read()
@@ -134,21 +219,31 @@ def fix_file(
     try:
         contents_text_orig = contents_text = contents_bytes.decode()
     except UnicodeDecodeError:
-        print(f"{filename} is non-utf-8 (not supported)")
+        print(f"{filename} is non-utf-8 (not supported)", file=sys.stderr)
         return 1
 
     contents_text = apply_fixers(contents_text, settings, filename)
 
-    if filename == "-":
-        print(contents_text, end="")
-    elif contents_text != contents_text_orig:
-        print(f"Rewriting {filename}", file=sys.stderr)
-        with open(filename, "w", encoding="UTF-8", newline="") as f:
-            f.write(contents_text)
+    returncode = 0
+    if contents_text != contents_text_orig:
+        if check:
+            display_name = "stdin" if filename == "-" else filename
+            print(f"Would rewrite {display_name}", file=sys.stderr)
+            returncode = 1
+        else:
+            if filename == "-":
+                print(contents_text, end="")
+            else:
+                print(f"Rewriting {filename}", file=sys.stderr)
+                with open(filename, "w", encoding="UTF-8", newline="") as f:
+                    f.write(contents_text)
+                if not exit_zero_even_if_changed:
+                    returncode = 1
+    else:
+        if filename == "-" and not check:
+            print(contents_text, end="")
 
-    if exit_zero_even_if_changed:
-        return 0
-    return contents_text != contents_text_orig
+    return returncode
 
 
 def apply_fixers(contents_text: str, settings: Settings, filename: str) -> str:
@@ -162,10 +257,7 @@ def apply_fixers(contents_text: str, settings: Settings, filename: str) -> str:
     if not callbacks:
         return contents_text
 
-    try:
-        tokens = src_to_tokens(contents_text)
-    except tokenize.TokenError:  # pragma: no cover (bpo-2180)
-        return contents_text
+    tokens = src_to_tokens(contents_text)
 
     fixup_dedent_tokens(tokens)
 

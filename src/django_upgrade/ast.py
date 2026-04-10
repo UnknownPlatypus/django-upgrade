@@ -3,9 +3,7 @@ from __future__ import annotations
 import ast
 import warnings
 from collections.abc import Container
-from typing import TYPE_CHECKING
-from typing import Literal
-from typing import cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from tokenize_rt import Offset
 

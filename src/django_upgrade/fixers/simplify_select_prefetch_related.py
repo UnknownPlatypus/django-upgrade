@@ -4,17 +4,11 @@ import ast
 from collections.abc import Iterable
 from functools import partial
 
-from tokenize_rt import Offset
-from tokenize_rt import Token
+from tokenize_rt import Offset, Token
 
 from django_upgrade.ast import ast_start_offset
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
-from django_upgrade.tokens import OP
-from django_upgrade.tokens import parse_call_args
-from django_upgrade.tokens import remove_arg
-from django_upgrade.tokens import reverse_find
+from django_upgrade.data import Fixer, State, TokenFunc
+from django_upgrade.tokens import OP, parse_call_args, remove_arg, reverse_find
 
 fixer = Fixer(
     __name__,
@@ -59,8 +53,9 @@ def visit_Call(
                 args_idx_to_remove.append(arg_idx)
 
         if args_idx_to_remove:
-            yield ast_start_offset(node.args[0]), partial(
-                simplify_related_lookup, args_idx_to_remove=args_idx_to_remove
+            yield (
+                ast_start_offset(node.args[0]),
+                partial(simplify_related_lookup, args_idx_to_remove=args_idx_to_remove),
             )
 
 

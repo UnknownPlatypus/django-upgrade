@@ -5,19 +5,11 @@ import re
 from collections.abc import Iterable
 from functools import partial
 
-from tokenize_rt import Offset
-from tokenize_rt import Token
+from tokenize_rt import Offset, Token
 
 from django_upgrade.ast import ast_start_offset
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
-from django_upgrade.tokens import CODE
-from django_upgrade.tokens import NAME
-from django_upgrade.tokens import OP
-from django_upgrade.tokens import STRING
-from django_upgrade.tokens import find
-from django_upgrade.tokens import parse_call_args
+from django_upgrade.data import Fixer, State, TokenFunc
+from django_upgrade.tokens import CODE, NAME, OP, STRING, find, parse_call_args
 
 fixer = Fixer(
     __name__,

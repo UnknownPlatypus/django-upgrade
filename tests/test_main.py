@@ -8,13 +8,12 @@ from textwrap import dedent
 from unittest import mock
 
 import pytest
-from tokenize_rt import UNIMPORTANT_WS
-from tokenize_rt import src_to_tokens
+from tokenize_rt import UNIMPORTANT_WS, src_to_tokens
 
 from django_upgrade import __main__  # noqa: F401
-from django_upgrade.main import fixup_dedent_tokens
-from django_upgrade.main import main
+from django_upgrade.main import fixup_dedent_tokens, get_target_version, main
 from django_upgrade.tokens import DEDENT
+from tests.compat import chdir
 
 
 def test_main_no_files(capsys):
@@ -75,8 +74,8 @@ def test_main_non_utf8_bytes(tmp_path, capsys):
 
     assert result == 1
     out, err = capsys.readouterr()
-    assert out == f"{path} is non-utf-8 (not supported)\n"
-    assert err == ""
+    assert out == ""
+    assert err == f"{path} is non-utf-8 (not supported)\n"
 
 
 def test_main_file(tmp_path, capsys):
@@ -89,6 +88,34 @@ def test_main_file(tmp_path, capsys):
     out, err = capsys.readouterr()
     assert err == f"Rewriting {path}\n"
     assert path.read_text() == "from django.core.paginator import Paginator\n"
+
+
+def test_main_check(tmp_path, capsys):
+    initial_contents = "from django.core.paginator import QuerySetPaginator\n"
+    path = tmp_path / "example.py"
+    path.write_text(initial_contents)
+
+    result = main(["--check", str(path)])
+
+    assert result == 1
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert err == f"Would rewrite {path}\n"
+    # Contents should be unchanged:
+    assert path.read_text() == initial_contents
+
+
+def test_main_check_stdin(capsys):
+    contents = b"from django.core.paginator import QuerySetPaginator\n"
+    stdin = io.TextIOWrapper(io.BytesIO(contents), "UTF-8")
+
+    with mock.patch.object(sys, "stdin", stdin):
+        result = main(["--check", "-"])
+
+    assert result == 1
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert err == "Would rewrite stdin\n"
 
 
 def test_main_exit_zero_even_if_changed(tmp_path, capsys):
@@ -122,9 +149,95 @@ def test_main_stdin_with_changes(capsys):
     with mock.patch.object(sys, "stdin", stdin):
         result = main(["-"])
 
-    assert result == 1
+    assert result == 0
     out, err = capsys.readouterr()
     assert out == "from django.core.paginator import Paginator\n"
+    assert err == ""
+
+
+@pytest.mark.parametrize(
+    "string,expected",
+    [
+        ("1.7", (1, 7)),
+        ("2.2", (2, 2)),
+        ("3.2", (3, 2)),
+        ("5.2", (5, 2)),
+    ],
+)
+def test_get_target_version_explicit(capsys, string, expected):
+    assert get_target_version(string) == expected
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert err == ""
+
+
+def test_get_target_version_auto_no_pyproject_toml(tmp_path, capsys):
+    with chdir(tmp_path):
+        assert get_target_version("auto") == (2, 2)
+
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert err == ""
+
+
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="Python 3.11+")
+@pytest.mark.parametrize(
+    "deps_line,expected",
+    [
+        ("django>=3.2", (3, 2)),
+        ("DJANGO>=3.2", (3, 2)),
+        ("Django==4.0", (4, 0)),
+        ("django~=4.1.3", (4, 1)),
+        ("django>=3.2,<4.0", (3, 2)),
+        ("django >= 2.2, <= 3.1", (2, 2)),
+        ("django[argon2] >= 5.2", (5, 2)),
+        ("django[argon2] >= 5.2, <6", (5, 2)),
+        ("django[argon2]>=6,<6.1", (6, 0)),
+    ],
+)
+def test_get_target_version_auto_matched(tmp_path, capsys, deps_line, expected):
+    pyproject_content = f"""[project]
+dependencies = [
+    "{deps_line}",
+]
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_content)
+
+    with chdir(tmp_path):
+        assert get_target_version("auto") == expected
+
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert (
+        err
+        == f"Detected Django version from pyproject.toml: {expected[0]}.{expected[1]}\n"
+    )
+
+
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="Python 3.11+")
+@pytest.mark.parametrize(
+    "deps_line",
+    [
+        "django-upgrade>=1.0.0",
+        "Django>=5.2 ; sys_platform == 'linux'",
+        "Django>=5.2, <6.0, !=5.2.1",
+        "Django>=0.0",
+        "DJANGO[argon2]>=0.0",
+    ],
+)
+def test_get_target_version_auto_unmatched(tmp_path, capsys, deps_line):
+    pyproject_content = f"""[project]
+dependencies = [
+    "{deps_line}",
+]
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_content)
+
+    with chdir(tmp_path):
+        assert get_target_version("auto") == (2, 2)
+
+    out, err = capsys.readouterr()
+    assert out == ""
     assert err == ""
 
 

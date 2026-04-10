@@ -4,16 +4,11 @@ import ast
 import pkgutil
 import re
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from functools import cached_property
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import DefaultDict
-from typing import TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
-from tokenize_rt import Offset
-from tokenize_rt import Token
+from tokenize_rt import Offset, Token
 
 from django_upgrade import fixers
 
@@ -39,6 +34,7 @@ class Settings:
         }
 
 
+apps_re = re.compile(r"(^|[\\/])apps\.py$")
 admin_re = re.compile(r"(\b|_)admin(\b|_)")
 commands_re = re.compile(r"(^|[\\/])management[\\/]commands[\\/]")
 dunder_init_re = re.compile(r"(^|[\\/])__init__\.py$")
@@ -55,7 +51,7 @@ class State:
         self,
         settings: Settings,
         filename: str,
-        from_imports: DefaultDict[str, set[str]],
+        from_imports: defaultdict[str, set[str]],
     ) -> None:
         self.settings = settings
         self.filename = filename
@@ -96,7 +92,7 @@ ASTFunc = Callable[
     [State, AST_T, tuple[ast.AST, ...]], Iterable[tuple[Offset, TokenFunc]]
 ]
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from typing import Protocol
 else:
     Protocol = object

@@ -12,9 +12,7 @@ from functools import partial
 from tokenize_rt import Offset
 
 from django_upgrade.ast import ast_start_offset
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
+from django_upgrade.data import Fixer, State, TokenFunc
 from django_upgrade.tokens import erase_node
 
 fixer = Fixer(
@@ -36,6 +34,13 @@ def visit_Assign(
         and node.targets[0].id == "USE_L10N"
         and isinstance(node.value, ast.Constant)
         and node.value.value is True
-        and isinstance(parents[-1], ast.Module)
+        and (
+            isinstance(parents[-1], ast.Module)
+            or (
+                isinstance(parents[-1], ast.ClassDef)
+                and len(parents[-1].body) > 1
+                and isinstance(parents[-2], ast.Module)
+            )
+        )
     ):
         yield ast_start_offset(node), partial(erase_node, node=node)

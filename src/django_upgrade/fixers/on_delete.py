@@ -6,29 +6,22 @@ https://docs.djangoproject.com/en/stable/releases/1.9/#features-deprecated-in-1-
 from __future__ import annotations
 
 import ast
-from collections.abc import Iterable
-from collections.abc import MutableMapping
+from collections.abc import Iterable, MutableMapping
 from functools import partial
 from weakref import WeakKeyDictionary
 
-from tokenize_rt import Offset
-from tokenize_rt import Token
+from tokenize_rt import Offset, Token
 
-from django_upgrade.ast import ast_start_offset
-from django_upgrade.ast import is_rewritable_import_from
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
-from django_upgrade.tokens import OP
-from django_upgrade.tokens import extract_indent
-from django_upgrade.tokens import find
-from django_upgrade.tokens import insert
-from django_upgrade.tokens import parse_call_args
+from django_upgrade.ast import ast_start_offset, is_rewritable_import_from
+from django_upgrade.data import Fixer, State, TokenFunc
+from django_upgrade.tokens import OP, extract_indent, find, insert, parse_call_args
 
 fixer = Fixer(
     __name__,
     min_version=(1, 9),
 )
+
+RELATION_FIELD_NAMES = frozenset({"ForeignKey", "OneToOneField"})
 
 
 @fixer.register(ast.ImportFrom)
@@ -40,12 +33,15 @@ def visit_ImportFrom(
     if (
         node.module == "django.db.models"
         and is_rewritable_import_from(node)
-        and any(alias.name in {"ForeignKey", "OneToOneField"} for alias in node.names)
+        and any(alias.name in RELATION_FIELD_NAMES for alias in node.names)
     ):
-        yield ast_start_offset(node), partial(
-            update_django_models_import,
-            node=node,
-            state=state,
+        yield (
+            ast_start_offset(node),
+            partial(
+                update_django_models_import,
+                node=node,
+                state=state,
+            ),
         )
 
 
@@ -76,14 +72,14 @@ def visit_Call(
         (
             (
                 isinstance(node.func, ast.Attribute)
-                and node.func.attr in {"ForeignKey", "OneToOneField"}
+                and node.func.attr in RELATION_FIELD_NAMES
                 and (models_imported := "models" in state.from_imports["django.db"])
                 and isinstance(node.func.value, ast.Name)
                 and node.func.value.id == "models"
             )
             or (
                 isinstance(node.func, ast.Name)
-                and node.func.id in {"ForeignKey", "OneToOneField"}
+                and node.func.id in RELATION_FIELD_NAMES
                 and node.func.id in state.from_imports["django.db.models"]
                 and (models_imported := False) is False  # force walrus
             )
@@ -92,10 +88,13 @@ def visit_Call(
         and all(kw.arg != "on_delete" for kw in node.keywords)
     ):
         should_update_import[state] = not models_imported
-        yield ast_start_offset(node), partial(
-            add_on_delete_keyword,
-            num_pos_args=len(node.args),
-            models_imported=models_imported,
+        yield (
+            ast_start_offset(node),
+            partial(
+                add_on_delete_keyword,
+                num_pos_args=len(node.args),
+                models_imported=models_imported,
+            ),
         )
 
 

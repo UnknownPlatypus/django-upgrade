@@ -9,11 +9,8 @@ from functools import partial
 
 from tokenize_rt import Offset
 
-from django_upgrade.ast import ast_start_offset
-from django_upgrade.ast import is_name_attr
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
+from django_upgrade.ast import ast_start_offset, is_name_attr
+from django_upgrade.data import Fixer, State, TokenFunc
 from django_upgrade.tokens import replace
 
 fixer = Fixer(
@@ -41,8 +38,9 @@ def visit_Call(
             for module, names in state.from_imports.items():
                 if related_model.id in names and "django." not in module:
                     new_str = f"{module.rpartition('.models')[0]}.{related_model.id}"
-                    yield ast_start_offset(related_model), partial(
-                        replace, src=f'"{new_str}"'
+                    yield (
+                        ast_start_offset(related_model),
+                        partial(replace, src=f'"{new_str}"'),
                     )
         elif (
             isinstance((related_model := node.args[0]), ast.Constant)

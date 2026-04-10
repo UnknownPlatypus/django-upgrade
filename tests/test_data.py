@@ -6,9 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from django_upgrade.data import FIXERS
-from django_upgrade.data import Settings
-from django_upgrade.data import State
+from django_upgrade.data import FIXERS, Settings, State
 
 settings = Settings(target_version=(4, 0))
 
@@ -254,11 +252,8 @@ def test_looks_like_test_file_false(filename: str) -> None:
     assert not make_state(filename).looks_like_test_file
 
 
-@pytest.mark.skip(
-    "Waiting decision in https://github.com/adamchainz/django-upgrade/issues/492"
-)
-def test_all_fixers_are_documented() -> None:  # pragma: no cover
-    readme = (Path(__name__).parent.parent / "README.rst").read_text()
+def test_all_fixers_are_documented() -> None:
+    readme = (Path(__name__).parent.parent / "docs/fixers.rst").read_text()
     docs = {m[1] for m in re.finditer(r"\*\*Name:\*\* ``(.+)``", readme, re.MULTILINE)}
 
     names = set(FIXERS)

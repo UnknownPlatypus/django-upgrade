@@ -11,7 +11,7 @@ import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
-from django_upgrade.main import TARGET_VERSION_CHOICES
+from django_upgrade.main import SUPPORTED_TARGET_VERSIONS
 
 _DJANGO_GIT_URL = "https://github.com/django/django"
 _CLONE_TARGET_DIR = Path.cwd() / ".django"
@@ -105,7 +105,7 @@ def git_clone_branches(*, repo: str, target_dir: Path, branches: list[str]) -> N
 
 def _get_branches() -> list[str]:
     """Get branches to fetch from possible target version"""
-    return [f"stable/{django_version}.x" for django_version in TARGET_VERSION_CHOICES]
+    return [f"stable/{major}.{minor}.x" for major, minor in SUPPORTED_TARGET_VERSIONS]
 
 
 def parse_field_args() -> dict[str, list[str]]:

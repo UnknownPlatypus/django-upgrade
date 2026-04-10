@@ -7,9 +7,7 @@ from functools import partial
 from tokenize_rt import Offset
 
 from django_upgrade.ast import ast_start_offset
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
+from django_upgrade.data import Fixer, State, TokenFunc
 from django_upgrade.field_order_const import MODEL_FIELD_ARG_ORDER
 from django_upgrade.tokens import reorder_call_kwargs
 
@@ -42,10 +40,13 @@ def visit_Call(
                     ordered_kwargs = sorted(initial_kwargs, key=model_arg_sort_func)
 
                     if not initial_kwargs == ordered_kwargs:
-                        yield ast_start_offset(node), partial(
-                            reorder_call_kwargs,
-                            node=node,
-                            ordered_kwargs_idx=[
-                                initial_kwargs.index(kw) for kw in ordered_kwargs
-                            ],
+                        yield (
+                            ast_start_offset(node),
+                            partial(
+                                reorder_call_kwargs,
+                                node=node,
+                                ordered_kwargs_idx=[
+                                    initial_kwargs.index(kw) for kw in ordered_kwargs
+                                ],
+                            ),
                         )

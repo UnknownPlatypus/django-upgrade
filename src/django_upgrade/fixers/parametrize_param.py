@@ -9,22 +9,21 @@ from collections.abc import Iterable
 from functools import partial
 from typing import cast
 
-from tokenize_rt import Offset
-from tokenize_rt import Token
+from tokenize_rt import Offset, Token
 
 from django_upgrade.ast import ast_start_offset
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
-from django_upgrade.tokens import OP
-from django_upgrade.tokens import delete_argument
-from django_upgrade.tokens import find
-from django_upgrade.tokens import find_first_token
-from django_upgrade.tokens import find_last_token
-from django_upgrade.tokens import insert
-from django_upgrade.tokens import parse_call_args
-from django_upgrade.tokens import replace
-from django_upgrade.tokens import reverse_consume_non_semantic_elements
+from django_upgrade.data import Fixer, State, TokenFunc
+from django_upgrade.tokens import (
+    OP,
+    delete_argument,
+    find,
+    find_first_token,
+    find_last_token,
+    insert,
+    parse_call_args,
+    replace,
+    reverse_consume_non_semantic_elements,
+)
 
 fixer = Fixer(
     __name__,
@@ -54,12 +53,15 @@ def visit_Call(
         and isinstance(node.args[1].elts[0], (ast.List, ast.Tuple))
         and isinstance(node.args[0], (ast.Constant, ast.List, ast.Tuple))
     ):
-        yield ast_start_offset(node), partial(
-            update_parametrize_call,
-            pytest_argnames=node.args[0],
-            pytest_argvalues=node.args[1],
-            ids_node_idx=len(node.args) + node.keywords.index(ids_node),
-            ids_values=[cast(ast.Constant, el).value for el in ids_node.value.elts],
+        yield (
+            ast_start_offset(node),
+            partial(
+                update_parametrize_call,
+                pytest_argnames=node.args[0],
+                pytest_argvalues=node.args[1],
+                ids_node_idx=len(node.args) + node.keywords.index(ids_node),
+                ids_values=[cast(ast.Constant, el).value for el in ids_node.value.elts],
+            ),
         )
 
 

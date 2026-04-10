@@ -6,11 +6,8 @@ from functools import partial
 
 from tokenize_rt import Offset
 
-from django_upgrade.ast import ast_start_offset
-from django_upgrade.ast import is_name_attr
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
+from django_upgrade.ast import ast_start_offset, is_name_attr
+from django_upgrade.data import Fixer, State, TokenFunc
 from django_upgrade.fixers.utils_timezone_simplifications import remove_attr_call
 from django_upgrade.tokens import find_and_replace_name
 
@@ -82,7 +79,8 @@ def visit_Call(
             )
         )
     ):
-        yield ast_start_offset(node), partial(
-            find_and_replace_name, name="localtime", new="localdate"
+        yield (
+            ast_start_offset(node),
+            partial(find_and_replace_name, name="localtime", new="localdate"),
         )
         yield ast_start_offset(node), partial(remove_attr_call)

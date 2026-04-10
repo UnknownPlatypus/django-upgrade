@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from django_upgrade.data import Settings
-from tests.fixers.tools import check_noop
-from tests.fixers.tools import check_transformed
+from tests.fixers.tools import check_noop, check_transformed
 
 settings = Settings(target_version=(4, 2))
 
@@ -35,7 +34,7 @@ def test_noop_ordered_class():
 
             class Meta:
                 verbose_name = _("Commentaire Blog")
-                verbose_name_plural = _("Commentaires Blog")
+                verbose_name_plural = _("Commentaries Blog")
 
             def __str__(self):
                 return f"Comment - {self.author_name}..."
@@ -438,7 +437,7 @@ def test_no_trailing_newline_class_end():
 
             class Meta:
                 verbose_name = _("Commentaire Blog")
-                verbose_name_plural = _("Commentaires Blog")
+                verbose_name_plural = _("Commentaries Blog")
 
             @property
             def raw_content(self):
@@ -456,7 +455,7 @@ def test_no_trailing_newline_class_end():
 
             class Meta:
                 verbose_name = _("Commentaire Blog")
-                verbose_name_plural = _("Commentaires Blog")
+                verbose_name_plural = _("Commentaries Blog")
 
             def __str__(self):
                 return f"Comment - {self.author_name}..."

@@ -5,8 +5,7 @@ import datetime as dt
 import pytest
 
 from django_upgrade.data import Settings
-from tests.fixers.tools import check_noop
-from tests.fixers.tools import check_transformed
+from tests.fixers.tools import check_noop, check_transformed
 
 settings = Settings(target_version=(5, 0))
 

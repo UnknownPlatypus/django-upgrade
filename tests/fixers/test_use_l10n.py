@@ -101,3 +101,97 @@ def test_success_with_other_lines():
         """,
         filename="myapp/settings.py",
     )
+
+
+def test_class_not_settings_file():
+    check_noop(
+        """\
+        class Settings:
+            ADMINS = []
+            USE_L10N = True
+        """,
+    )
+
+
+def test_class_false():
+    check_noop(
+        """\
+        class Settings:
+            ADMINS = []
+            USE_L10N = False
+        """,
+        filename="myapp/settings.py",
+    )
+
+
+def test_class_dynamic():
+    check_noop(
+        """\
+        import os
+        class Settings:
+            ADMINS = []
+            USE_L10N = os.environ["USE_L10N"]
+        """,
+        filename="myapp/settings.py",
+    )
+
+
+def test_class_only_assignment():
+    check_noop(
+        """\
+        class Settings:
+            USE_L10N = True
+        """,
+        filename="myapp/settings.py",
+    )
+
+
+def test_class_ignore_conditional():
+    check_noop(
+        """\
+        class Settings:
+            ADMINS = []
+            if something:
+                USE_L10N = True
+        """,
+        filename="myapp/settings.py",
+    )
+
+
+def test_class_success():
+    check_transformed(
+        """\
+        class Settings:
+            ADMINS = []
+            USE_L10N = True
+            MANAGERS = []
+        """,
+        """\
+        class Settings:
+            ADMINS = []
+            MANAGERS = []
+        """,
+        filename="myapp/settings/base.py",
+    )
+
+
+def test_class_success_inheritance():
+    check_transformed(
+        """\
+        class BaseSettings:
+            ADMINS = []
+            USE_L10N = True
+
+        class ProdSettings(BaseSettings):
+            ADMINS = []
+            USE_L10N = True
+        """,
+        """\
+        class BaseSettings:
+            ADMINS = []
+
+        class ProdSettings(BaseSettings):
+            ADMINS = []
+        """,
+        filename="myapp/settings/base.py",
+    )

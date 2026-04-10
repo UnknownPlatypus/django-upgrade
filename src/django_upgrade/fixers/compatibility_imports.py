@@ -1,34 +1,14 @@
-"""
-- Replace compatibility imports for
-    - `django.core.exceptions.EmptyResultSet`
-    - `django.core.exceptions.FieldDoesNotExist`
-    - `django.forms.utils.pretty_name`
-    - `django.forms.boundfield.BoundField`
-  See https://docs.djangoproject.com/en/3.1/releases/3.1/#id1
-
-- Replace `JSONField` imports:
-  See https://docs.djangoproject.com/en/3.1/releases/3.1/#features-deprecated-in-3-1
-
-- Replace `django.utils.functional.lru_cache` with `functools.lru_cache`
-  Undocumented change
-"""
-
 from __future__ import annotations
 
 import ast
 from collections import defaultdict
-from collections.abc import Iterable
-from collections.abc import Mapping
-from functools import lru_cache
-from functools import partial
+from collections.abc import Iterable, Mapping
+from functools import cache, partial
 
 from tokenize_rt import Offset
 
-from django_upgrade.ast import ast_start_offset
-from django_upgrade.ast import is_rewritable_import_from
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
+from django_upgrade.ast import ast_start_offset, is_rewritable_import_from
+from django_upgrade.data import Fixer, State, TokenFunc
 from django_upgrade.tokens import update_import_modules
 
 fixer = Fixer(
@@ -108,6 +88,7 @@ REPLACEMENTS_EXACT = {
     (2, 0): {
         "django.utils.functional": {"lru_cache": "functools"},
         "django.utils.decorators": {"ContextDecorator": "contextlib"},
+        "django.http.cookie": {"SimpleCookie": "http.cookies"},
     },
     (3, 1): {
         "django.contrib.postgres.forms": {
@@ -139,7 +120,7 @@ REPLACEMENTS_EXCEPT_MIGRATIONS = {
 }
 
 
-@lru_cache(maxsize=None)
+@cache
 def _get_replacements(
     version: tuple[int, int], looks_like_migrations_file: bool
 ) -> Mapping[str, dict[str, str]]:
@@ -178,8 +159,11 @@ def visit_ImportFrom(
     if node.module in replacements and any(
         alias.name in replacements[node.module] for alias in node.names
     ):
-        yield ast_start_offset(node), partial(
-            update_import_modules,
-            node=node,
-            module_rewrites=replacements[node.module],
+        yield (
+            ast_start_offset(node),
+            partial(
+                update_import_modules,
+                node=node,
+                module_rewrites=replacements[node.module],
+            ),
         )

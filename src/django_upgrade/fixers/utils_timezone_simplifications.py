@@ -4,19 +4,17 @@ import ast
 from collections.abc import Iterable
 from functools import partial
 
-from tokenize_rt import Offset
-from tokenize_rt import Token
+from tokenize_rt import Offset, Token
 
-from django_upgrade.ast import ast_start_offset
-from django_upgrade.ast import is_name_attr
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
-from django_upgrade.tokens import OP
-from django_upgrade.tokens import find
-from django_upgrade.tokens import find_and_replace_name
-from django_upgrade.tokens import parse_call_args
-from django_upgrade.tokens import remove_arg
+from django_upgrade.ast import ast_start_offset, is_name_attr
+from django_upgrade.data import Fixer, State, TokenFunc
+from django_upgrade.tokens import (
+    OP,
+    find,
+    find_and_replace_name,
+    parse_call_args,
+    remove_arg,
+)
 
 fixer = Fixer(
     __name__,
@@ -84,8 +82,9 @@ def visit_Call(
             and not parents[-2].args
             and not parents[-2].keywords
         ):
-            yield ast_start_offset(node), partial(
-                find_and_replace_name, name="localtime", new="localdate"
+            yield (
+                ast_start_offset(node),
+                partial(find_and_replace_name, name="localtime", new="localdate"),
             )
             yield ast_start_offset(node), partial(remove_attr_call)
 
@@ -113,8 +112,9 @@ def visit_Call(
             )
         ):
             yield ast_start_offset(node), partial(remove_datetime_default)
-            yield ast_start_offset(node), partial(
-                find_and_replace_name, name="make_aware", new="localtime"
+            yield (
+                ast_start_offset(node),
+                partial(find_and_replace_name, name="make_aware", new="localtime"),
             )
 
 

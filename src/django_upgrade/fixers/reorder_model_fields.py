@@ -6,19 +6,16 @@ from collections import defaultdict
 from collections.abc import Iterable
 from functools import partial
 
-from tokenize_rt import Offset
-from tokenize_rt import Token
+from tokenize_rt import Offset, Token
 
-from django_upgrade.ast import ast_start_offset
-from django_upgrade.ast import is_name_attr
-from django_upgrade.ast import is_single_target_assign
-from django_upgrade.data import Fixer
-from django_upgrade.data import State
-from django_upgrade.data import TokenFunc
-from django_upgrade.tokens import PHYSICAL_NEWLINE
-from django_upgrade.tokens import consume
-from django_upgrade.tokens import find_first_token_at_line
-from django_upgrade.tokens import reverse_consume_non_semantic_elements
+from django_upgrade.ast import ast_start_offset, is_name_attr, is_single_target_assign
+from django_upgrade.data import Fixer, State, TokenFunc
+from django_upgrade.tokens import (
+    PHYSICAL_NEWLINE,
+    consume,
+    find_first_token_at_line,
+    reverse_consume_non_semantic_elements,
+)
 
 fixer = Fixer(
     __name__,
@@ -73,7 +70,7 @@ _decorator_to_content_type = {
 _PHYSICAL_NEWLINE_TOKEN = Token(name=PHYSICAL_NEWLINE, src="\n")
 
 
-def _looks_like_manager_instanciation(element: ast.AST) -> bool:
+def _looks_like_manager_instantiation(element: ast.AST) -> bool:
     return isinstance(element, ast.Call) and (
         (  # my_manager = MyManager()
             isinstance(element.func, ast.Name) and "Manager" in element.func.id
@@ -107,7 +104,7 @@ def get_element_type_with_lineno(
     ):
         if target.id == "objects" or (
             element.value is not None
-            and _looks_like_manager_instanciation(element.value)
+            and _looks_like_manager_instantiation(element.value)
         ):
             # Because Manager definition order in the class matter, it is not a
             # safe idea to try distinguishing the `object` manager from other ones.
@@ -208,9 +205,12 @@ def visit_ClassDef(
                     node.end_lineno,
                 )  # type: ignore[arg-type]  # ast.ClassDef always have end_lineno
             )
-            yield ast_start_offset(node), partial(
-                reorder_class_body,
-                element_types_with_range=element_types_with_range,
+            yield (
+                ast_start_offset(node),
+                partial(
+                    reorder_class_body,
+                    element_types_with_range=element_types_with_range,
+                ),
             )
 
 

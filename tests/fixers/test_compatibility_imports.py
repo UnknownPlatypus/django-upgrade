@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from django_upgrade.data import Settings
-from tests.fixers.tools import check_noop
-from tests.fixers.tools import check_transformed
+from tests.fixers.tools import check_noop, check_transformed
 
 
 class TestUtilsFunctional:
@@ -330,6 +329,7 @@ class TestCompatibility111:
 def test_all_transformed():
     check_transformed(
         """\
+        from django.http.cookie import SimpleCookie
         from django.forms.forms import pretty_name
         from django.forms.forms import BoundField
         from django.db.models.fields import FieldDoesNotExist
@@ -341,6 +341,7 @@ def test_all_transformed():
         from django.contrib.postgres.forms.jsonb import JSONField
         """,
         """\
+        from http.cookies import SimpleCookie
         from django.forms.utils import pretty_name
         from django.forms.boundfield import BoundField
         from django.core.exceptions import FieldDoesNotExist
