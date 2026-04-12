@@ -102,6 +102,135 @@ For example:
      class Example3Tests(TestCase):
          ...
 
+``datetime.fromisoformat``
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``datetime_fromisoformat``
+
+Replaces ``datetime.strptime()`` calls with ISO format strings with ``datetime.fromisoformat()`` or ``date.fromisoformat()``.
+
+.. code-block:: diff
+
+    -datetime.strptime("2024-02-12", "%Y-%m-%d").date()
+    +date.fromisoformat("2024-02-12")
+
+    -datetime.strptime("2024-12-13T12:00:23", "%Y-%m-%dT%H:%M:%S")
+    +datetime.fromisoformat("2024-12-13T12:00:23")
+
+Model relationship as string
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``model_relationship_as_str``
+
+Converts model relationship field references (``ForeignKey``, ``ManyToManyField``, ``OneToOneField``) from model class references to fully-qualified string format.
+
+.. code-block:: diff
+
+    -ForeignKey(User)
+    +ForeignKey("accounts.User")
+
+``pytest.param`` ids
+~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``parametrize_param``
+
+Converts ``@pytest.mark.parametrize()`` with ``ids=[...]`` into individual ``pytest.param(..., id="...")`` calls.
+
+.. code-block:: diff
+
+    -@pytest.mark.parametrize("x", [[1], [2]], ids=["one", "two"])
+    +@pytest.mark.parametrize("x", [pytest.param(1, id="one"), pytest.param(2, id="two")])
+
+``redirect(reverse(...))``
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``redirect_reverse``
+
+Removes unnecessary nested ``reverse()`` inside ``redirect()`` since ``redirect()`` accepts view names directly.
+
+.. code-block:: diff
+
+    -redirect(reverse("myview"))
+    +redirect("myview")
+
+Redundant ``.date()`` call
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``redundant_date_call``
+
+Replaces ``timezone.localtime().date()`` with ``timezone.localdate()``, including when wrapped in arithmetic expressions.
+
+.. code-block:: diff
+
+    -(timezone.localtime() - timedelta(days=1)).date()
+    +timezone.localdate() - timedelta(days=1)
+
+Reorder model field kwargs
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``reorder_model_field_kwargs``
+
+Reorders keyword arguments in model field definitions to match Django's conventional argument order.
+
+.. code-block:: diff
+
+    -name = models.CharField(db_index=True, max_length=100, null=False)
+    +name = models.CharField(max_length=100, null=False, db_index=True)
+
+Reorder model fields
+~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``reorder_model_fields``
+
+Reorganizes model class body elements (fields, managers, ``Meta``, methods) into the conventional Django ordering.
+
+.. code-block:: diff
+
+     class User(models.Model):
+    -    def save(self): pass
+         name = models.CharField(max_length=100)
+         objects = models.Manager()
+    +    def save(self): pass
+
+Simplify ``select_related`` / ``prefetch_related``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``simplify_select_prefetch_related``
+
+Removes redundant ``select_related()`` / ``prefetch_related()`` arguments when a longer nested lookup already covers them.
+
+.. code-block:: diff
+
+    -.select_related("author", "author__profile")
+    +.select_related("author__profile")
+
+``strftime`` to format spec
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``strftime_to_format_spec``
+
+Converts ``.strftime()`` calls inside f-strings to the format specification syntax.
+
+.. code-block:: diff
+
+    -f"{date.strftime('%Y-%m-%d')}"
+    +f"{date:%Y-%m-%d}"
+
+``timezone`` simplifications
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``utils_timezone_simplifications``
+
+Simplifies Django timezone utility calls by removing redundant arguments and replacing verbose patterns with shorter equivalents.
+
+.. code-block:: diff
+
+    -timezone.localtime(timezone.now())
+    +timezone.localtime()
+
+    -timezone.make_aware(datetime.now())
+    +timezone.localtime()
+
 Django 6.0
 ----------
 
