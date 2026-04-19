@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import pytest
+
 from django_upgrade.data import Settings
+from django_upgrade.main import get_compat_imports, load_pyproject
 from tests.fixers.tools import check_noop, check_transformed
 
 
@@ -414,3 +417,134 @@ def test_urlresolvers_transformed():
         """,
         Settings(target_version=(1, 10)),
     )
+
+
+class TestGetCompatImports:
+    def test_no_pyproject(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        assert get_compat_imports(load_pyproject()) == {}
+
+    def test_empty_section(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.django-upgrade]\n", encoding="utf-8"
+        )
+        assert get_compat_imports(load_pyproject()) == {}
+
+    def test_parses_config(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.django-upgrade.compat-imports]\n"
+            '"api.utils.Month" = "hellowatt.utils.date"\n'
+            '"api.utils.Year" = "hellowatt.utils.date"\n'
+            '"core.lock.FileLock" = "hellowatt.utils.lock"\n',
+            encoding="utf-8",
+        )
+        assert get_compat_imports(load_pyproject()) == {
+            "api.utils": {
+                "Month": "hellowatt.utils.date",
+                "Year": "hellowatt.utils.date",
+            },
+            "core.lock": {"FileLock": "hellowatt.utils.lock"},
+        }
+
+    def test_invalid_key_no_dot(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.django-upgrade.compat-imports]\n"Month" = "hellowatt.utils.date"\n',
+            encoding="utf-8",
+        )
+        with pytest.raises(SystemExit, match="invalid compat-import key"):
+            get_compat_imports(load_pyproject())
+
+
+class TestCustomCompatImports:
+    settings = Settings(
+        target_version=(2, 2),
+        compat_imports={
+            "api.utils": {"Month": "hellowatt.utils.date"},
+            "core.lock": {"FileLock": "hellowatt.utils.lock"},
+        },
+    )
+
+    def test_noop_unmatched_module(self):
+        check_noop(
+            """\
+            from other.module import Month
+            """,
+            self.settings,
+        )
+
+    def test_noop_unmatched_name(self):
+        check_noop(
+            """\
+            from api.utils import Year
+            """,
+            self.settings,
+        )
+
+    def test_simple_rewrite(self):
+        check_transformed(
+            """\
+            from api.utils import Month
+            """,
+            """\
+            from hellowatt.utils.date import Month
+            """,
+            self.settings,
+        )
+
+    def test_rewrite_keeps_other_names(self):
+        check_transformed(
+            """\
+            from api.utils import Month, some_func
+            """,
+            """\
+            from hellowatt.utils.date import Month
+            from api.utils import some_func
+            """,
+            self.settings,
+        )
+
+    def test_rewrite_with_alias(self):
+        check_transformed(
+            """\
+            from api.utils import Month as M
+            """,
+            """\
+            from hellowatt.utils.date import Month as M
+            """,
+            self.settings,
+        )
+
+    def test_multiple_custom_rewrites(self):
+        check_transformed(
+            """\
+            from api.utils import Month
+            from core.lock import FileLock
+            """,
+            """\
+            from hellowatt.utils.date import Month
+            from hellowatt.utils.lock import FileLock
+            """,
+            self.settings,
+        )
+
+    def test_custom_and_django_rewrites_combined(self):
+        settings = Settings(
+            target_version=(2, 0),
+            compat_imports={
+                "api.utils": {"Month": "hellowatt.utils.date"},
+            },
+        )
+        check_transformed(
+            """\
+            from api.utils import Month
+            from django.utils.functional import lru_cache
+            """,
+            """\
+            from hellowatt.utils.date import Month
+            from functools import lru_cache
+            """,
+            settings,
+        )

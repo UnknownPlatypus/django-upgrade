@@ -121,23 +121,24 @@ REPLACEMENTS_EXCEPT_MIGRATIONS = {
 
 
 @cache
-def _get_replacements(
-    version: tuple[int, int], looks_like_migrations_file: bool
-) -> Mapping[str, dict[str, str]]:
+def _get_replacements(state: State) -> Mapping[str, dict[str, str]]:
     replacements: defaultdict[str, dict[str, str]] = defaultdict(dict)
     for target_version, target_replacements in REPLACEMENTS_EXACT.items():
-        if target_version <= version:
+        if target_version <= state.settings.target_version:
             for old_module, rewrite in target_replacements.items():
                 replacements[old_module].update(rewrite)
 
-    if not looks_like_migrations_file:
+    if not state.looks_like_migrations_file:
         for (
             target_version,
             target_replacements,
         ) in REPLACEMENTS_EXCEPT_MIGRATIONS.items():
-            if target_version <= version:
+            if target_version <= state.settings.target_version:
                 for old_module, rewrite in target_replacements.items():
                     replacements[old_module].update(rewrite)
+
+    for mod, rewrites in state.settings.compat_imports.items():
+        replacements.setdefault(mod, {}).update(rewrites)
 
     replacements.default_factory = None
     return replacements
@@ -152,9 +153,7 @@ def visit_ImportFrom(
     if not is_rewritable_import_from(node) or node.module is None:
         return
 
-    replacements = _get_replacements(
-        state.settings.target_version, state.looks_like_migrations_file
-    )
+    replacements = _get_replacements(state)
 
     if node.module in replacements and any(
         alias.name in replacements[node.module] for alias in node.names

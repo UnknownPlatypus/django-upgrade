@@ -651,6 +651,21 @@ Rewrites some compatibility imports:
     -from django.template.base import TRANSLATOR_COMMENT_MARK
     +from django.utils.translation.template import TRANSLATOR_COMMENT_MARK
 
+It also support extra compatibility import rewrite configure in a pyproject.toml file:
+
+.. code-block:: toml
+
+    [tool.django-upgrade.compat-imports]
+    "api.utils.Month" = "hellowatt.utils.date"
+
+This addition would trigger this change:
+
+.. code-block:: diff
+
+    -from api.utils import Month
+    +from hellowatt.utils.date import Month
+
+
 Django 3.2
 ----------
 

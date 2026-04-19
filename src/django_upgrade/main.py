@@ -90,10 +90,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
+    config = load_pyproject()
     settings = Settings(
-        target_version=get_target_version(args.target_version),
+        target_version=get_target_version(args.target_version, config),
         only_fixers=set(args.only) if args.only else None,
         skip_fixers=set(args.skip) if args.skip else None,
+        compat_imports=get_compat_imports(config),
     )
 
     ret = 0
@@ -127,7 +129,20 @@ class ListFixersAction(argparse.Action):
         parser.exit()
 
 
-def get_target_version(string: str) -> tuple[int, int]:
+def load_pyproject() -> dict[str, Any]:
+    if sys.version_info < (3, 11):
+        return {}
+
+    import tomllib
+
+    try:
+        with open("pyproject.toml", "rb") as fp:
+            return tomllib.load(fp)
+    except FileNotFoundError:
+        return {}
+
+
+def get_target_version(string: str, config: dict[str, Any]) -> tuple[int, int]:
     default = (2, 2)
     if string != "auto":
         return cast(
@@ -135,15 +150,7 @@ def get_target_version(string: str) -> tuple[int, int]:
             tuple(int(x) for x in string.split(".", 1)),
         )
 
-    if sys.version_info < (3, 11):
-        return default
-
-    import tomllib
-
-    try:
-        with open("pyproject.toml", "rb") as fp:
-            config = tomllib.load(fp)
-    except FileNotFoundError:
+    if not config:
         return default
 
     deps = config.get("project", {}).get("dependencies", [])
@@ -202,6 +209,27 @@ def get_target_version(string: str) -> tuple[int, int]:
                 return (major, minor)
 
     return default
+
+
+def get_compat_imports(config: dict[str, Any]) -> dict[str, dict[str, str]]:
+    if not config:
+        return {}
+
+    raw = config.get("tool", {}).get("django-upgrade", {}).get("compat-imports", {})
+    if not raw:
+        return {}
+
+    result: dict[str, dict[str, str]] = {}
+    for key, new_module in raw.items():
+        if "." not in key:
+            raise SystemExit(
+                f"django-upgrade: invalid compat-import key {key!r}:"
+                " must be 'module.Name'"
+            )
+        old_module, _, name = key.rpartition(".")
+        result.setdefault(old_module, {})[name] = new_module
+
+    return result
 
 
 def fix_file(

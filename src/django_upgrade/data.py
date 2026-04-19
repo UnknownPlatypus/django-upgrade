@@ -17,6 +17,7 @@ class Settings:
     __slots__ = (
         "target_version",
         "enabled_fixers",
+        "compat_imports",
     )
 
     def __init__(
@@ -24,8 +25,10 @@ class Settings:
         target_version: tuple[int, int],
         only_fixers: set[str] | None = None,
         skip_fixers: set[str] | None = None,
+        compat_imports: dict[str, dict[str, str]] | None = None,
     ) -> None:
         self.target_version = target_version
+        self.compat_imports = compat_imports or {}
         self.enabled_fixers = {
             name
             for name in FIXERS

@@ -11,7 +11,12 @@ import pytest
 from tokenize_rt import UNIMPORTANT_WS, src_to_tokens
 
 from django_upgrade import __main__  # noqa: F401
-from django_upgrade.main import fixup_dedent_tokens, get_target_version, main
+from django_upgrade.main import (
+    fixup_dedent_tokens,
+    get_target_version,
+    load_pyproject,
+    main,
+)
 from django_upgrade.tokens import DEDENT
 from tests.compat import chdir
 
@@ -165,7 +170,7 @@ def test_main_stdin_with_changes(capsys):
     ],
 )
 def test_get_target_version_explicit(capsys, string, expected):
-    assert get_target_version(string) == expected
+    assert get_target_version(string, load_pyproject()) == expected
     out, err = capsys.readouterr()
     assert out == ""
     assert err == ""
@@ -173,7 +178,7 @@ def test_get_target_version_explicit(capsys, string, expected):
 
 def test_get_target_version_auto_no_pyproject_toml(tmp_path, capsys):
     with chdir(tmp_path):
-        assert get_target_version("auto") == (2, 2)
+        assert get_target_version("auto", load_pyproject()) == (2, 2)
 
     out, err = capsys.readouterr()
     assert out == ""
@@ -204,7 +209,7 @@ dependencies = [
     (tmp_path / "pyproject.toml").write_text(pyproject_content)
 
     with chdir(tmp_path):
-        assert get_target_version("auto") == expected
+        assert get_target_version("auto", load_pyproject()) == expected
 
     out, err = capsys.readouterr()
     assert out == ""
@@ -234,7 +239,7 @@ dependencies = [
     (tmp_path / "pyproject.toml").write_text(pyproject_content)
 
     with chdir(tmp_path):
-        assert get_target_version("auto") == (2, 2)
+        assert get_target_version("auto", load_pyproject()) == (2, 2)
 
     out, err = capsys.readouterr()
     assert out == ""
