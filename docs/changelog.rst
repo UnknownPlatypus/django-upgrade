@@ -2,6 +2,92 @@
 Changelog
 =========
 
+1.31.1 (2026-06-26)
+-------------------
+
+* Remove the ``settings_logging_admin_email_handler`` fixer because it made an incorrect change and cannot be salvaged.
+
+  Thanks to Mike Edmunds for spotting the mistake in `this GitHub comment <https://github.com/adamchainz/django-upgrade/pull/662#discussion_r3463198673>`__.
+  `PR #671 <https://github.com/adamchainz/django-upgrade/pull/671>`__.
+
+1.31.0 (2026-06-25)
+-------------------
+
+* Support Django 6.1 as a target version.
+
+  `PR #646 <https://github.com/adamchainz/django-upgrade/pull/646>`__.
+
+* Add Django 6.1+ :ref:`mail_get_connection <mail_get_connection>` fixer to replace no-argument mail ``get_connection()`` calls with ``mailers.default``, and remove inline ``connection=get_connection()`` kwargs from mail sending functions.
+
+  `PR #666 <https://github.com/adamchainz/django-upgrade/pull/666>`__.
+
+* Add Django 6.1+ :ref:`mail_fail_silently <mail_fail_silently>` fixer to remove ``fail_silently=False`` keyword arguments from mail sending function calls.
+
+  `PR #668 <https://github.com/adamchainz/django-upgrade/pull/668>`__.
+
+* Add Django 6.1+ ``settings_logging_admin_email_handler`` fixer to rename the ``email_backend`` argument of ``AdminEmailHandler`` in the ``LOGGING`` setting to ``using``.
+
+  `PR #662 <https://github.com/adamchainz/django-upgrade/pull/662>`__.
+
+* Add Django 6.1+ ``compatibility_imports`` :ref:`fixer entries <postgres_bit_aggregates>` to move ``BitAnd``, ``BitOr``, and ``BitXor`` imports from ``django.contrib.postgres.aggregates`` to ``django.db.models``.
+
+  `PR #658 <https://github.com/adamchainz/django-upgrade/pull/658>`__.
+
+* Add Django 6.1+ :ref:`transaction_savepoint <transaction_savepoint>` fixer to rename ``django.db.transaction``\’s ``savepoint`` to ``savepoint_create``.
+
+  `PR #660 <https://github.com/adamchainz/django-upgrade/pull/660>`__.
+
+* Add Django 2.0+ :ref:`render_to_response <render_to_response>` fixer to rewrite ``render_to_response()`` calls to ``render()``, inserting ``request`` as the first argument.
+
+  `PR #669 <https://github.com/adamchainz/django-upgrade/pull/669>`__.
+
+* Extend :ref:`test_http_headers <test_http_headers>` fixer to cover ``AsyncClient``, ``AsyncRequestFactory``, and ``self.async_client.*()`` calls.
+
+  Thanks to Benjamin Aduo in `PR #633 <https://github.com/adamchainz/django-upgrade/pull/633>`__.
+
+* Extend :ref:`django_urls <django_urls>` fixer to convert translated URL patterns wrapped in translation functions, like ``_(r'^about/$')``, when the pattern is convertible.
+
+  `PR #667 <https://github.com/adamchainz/django-upgrade/pull/667>`__.
+
+* Extend :ref:`utils_timezone` fixer to work when no ``import datetime`` statement exists, by inserting ``import datetime as dt`` when the name ``dt`` is unused.
+
+  Thanks to Ryan Siemens for the report in `Issue #568 <https://github.com/adamchainz/django-upgrade/issues/568>`__ and Benjamin Aduo for the implementation in `PR #631 <https://github.com/adamchainz/django-upgrade/pull/631>`__.
+
+* Extend :ref:`versioned_test_skip_decorators <versioned_test_skip_decorators>` fixer to also remove the entire decorated function or class when the skip condition is always true.
+  For example, when targeting Django 5.2+, a function decorated with ``@pytest.mark.skipif(django.VERSION >= (5, 2), ...)`` will be removed.
+
+  `PR #648 <https://github.com/adamchainz/django-upgrade/pull/648>`__.
+
+* Extend :ref:`versioned_test_skip_decorators <versioned_test_skip_decorators>` fixer to support async function definitions.
+
+  `PR #649 <https://github.com/adamchainz/django-upgrade/pull/649>`__.
+
+* Add Django 1.11+ fixer :ref:`permalink <permalink>` to rewrite ``@models.permalink`` decorator usages to use ``reverse()`` directly.
+
+  `PR #647 <https://github.com/adamchainz/django-upgrade/pull/647>`__.
+  Thanks to Joerg Sonnenberger for the report in `Issue #645 <https://github.com/adamchainz/django-upgrade/issues/645>`__ and review.
+
+* Fix :ref:`null_boolean_field <null_boolean_field>` fixer when ``NullBooleanField`` is used in non-call contexts, for example as a base class.
+
+  `PR #664 <https://github.com/adamchainz/django-upgrade/pull/664>`__.
+
+* Fix :ref:`versioned_branches <versioned_branches>` fixer to avoid leaving code with broken syntax emptying a parent block.
+  A ``pass`` is now inserted to keep the code valid.
+
+  `PR #665 <https://github.com/adamchainz/django-upgrade/pull/665>`__.
+
+* Fix these fixers to correctly handle calls with starred arguments:
+
+  * :ref:`email_validator <email_validator>`
+  * :ref:`mail_api_kwargs <mail_api_kwargs>`
+  * :ref:`on_delete <on_delete>`
+  * :ref:`signal_providing_args <signal_providing_args>`
+  * :ref:`timezone_fixedoffset <timezone_fixedoffset>`
+
+  For example, the :ref:`signal_providing_args <signal_providing_args>` fixer now rewrites ``Signal(providing_args=[...], *args)`` to ``Signal(*args)``.
+
+  `PR #670 <https://github.com/adamchainz/django-upgrade/pull/670>`__.
+
 1.30.0 (2026-02-24)
 -------------------
 

@@ -10,6 +10,8 @@ All versions
 
 The below fixers run regardless of the target version.
 
+.. _versioned_branches:
+
 Versioned blocks
 ~~~~~~~~~~~~~~~~
 
@@ -71,7 +73,10 @@ Supports these test skip decorators:
   .. |pytest.mark.skipif| replace:: ``@pytest.mark.skipif``
   __ https://docs.pytest.org/en/stable/how-to/skipping.html#id1
 
-For example:
+When the skip condition is always false for the target version, meaning the test will always run, the decorator is removed.
+When the skip condition is always true, meaning the test will never run, the entire decorated function or class is removed.
+
+For example, some always-false conditions triggering decorator removals:
 
 .. code-block:: diff
 
@@ -101,6 +106,28 @@ For example:
     -@pytest.mark.skipif(django.VERSION < (5, 1), reason="Django 5.1+")
      class Example3Tests(TestCase):
          ...
+
+…and some always-true conditions triggering function removals:
+
+.. code-block:: diff
+
+     import unittest
+
+     import django
+     import pytest
+     from django.test import TestCase
+
+     class ExampleTests(TestCase):
+         def test_one(self):
+             ...
+
+    -    @pytest.mark.skipif(django.VERSION >= (5, 1), reason="Only applies to Django < 5.1")
+    -    def test_four(self):
+    -        ...
+
+    -@unittest.skipUnless(django.VERSION < (5, 1), "Only applies to Django < 5.1")
+    -class Example2Tests(TestCase):
+    -    ...
 
 ``datetime.fromisoformat``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -230,6 +257,97 @@ Simplifies Django timezone utility calls by removing redundant arguments and rep
 
     -timezone.make_aware(datetime.now())
     +timezone.localtime()
+
+Django 6.1
+----------
+
+`Release Notes <https://docs.djangoproject.com/en/6.1/releases/6.1/>`__
+
+.. _mail_get_connection:
+
+``mail.get_connection()`` replacement
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``mail_get_connection``
+
+Replaces no-argument calls to ``mail.get_connection()`` with ``mail.mailers.default``, and removes inline ``connection=get_connection()`` keyword arguments from ``send_mail()``, ``send_mass_mail()``, ``mail_admins()``, and ``mail_managers()`` calls, per `the mailers migration guide <https://docs.djangoproject.com/en/6.1/howto/mailers-migration/#replacing-get-connection-and-connection-arguments>`__.
+
+.. code-block:: diff
+
+   -from django.core.mail import get_connection, send_mail
+   +from django.core.mail import mailers, send_mail
+
+    # Standalone usage
+   -conn = get_connection()
+   +conn = mailers.default
+    conn.send_messages([msg1, msg2])
+
+    # Or with module import
+    from django.core import mail
+    from django.core import mail
+   -conn = mail.get_connection()
+   +conn = mail.mailers.default
+
+    # Inline connection= kwarg is removed entirely
+   -send_mail("subject", "message", "from@example.com", ["to@example.com"],
+   -          connection=get_connection())
+   +send_mail("subject", "message", "from@example.com", ["to@example.com"])
+
+.. _mail_fail_silently:
+
+``fail_silently=False`` removal
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``mail_fail_silently``
+
+Removes ``fail_silently=False`` keyword arguments from calls to ``send_mail()``, ``send_mass_mail()``, ``mail_admins()``, ``mail_managers()``, and ``EmailMessage(...).send()`` / ``EmailMultiAlternatives(...).send()``, since ``False`` is the default, per `the mailers migration guide <https://docs.djangoproject.com/en/6.1/howto/mailers-migration/#replacing-fail-silently>`__.
+
+.. code-block:: diff
+
+    from django.core.mail import send_mail, EmailMessage
+
+   -send_mail("subject", "message", "from@example.com", ["to@example.com"],
+   -          fail_silently=False)
+   +send_mail("subject", "message", "from@example.com", ["to@example.com"])
+
+   -EmailMessage("subject", "message", "from@example.com", ["to@example.com"]).send(
+   -    fail_silently=False
+   -)
+   +EmailMessage("subject", "message", "from@example.com", ["to@example.com"]).send()
+
+.. _postgres_bit_aggregates:
+
+``BitAnd``, ``BitOr``, and ``BitXor`` aggregate move
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``compatibility_imports``
+
+Rewrites imports of ``BitAnd``, ``BitOr``, and ``BitXor`` from ``django.contrib.postgres.aggregates`` to the new all-database versions in ``django.db.models``, per `this change <https://docs.djangoproject.com/en/6.1/releases/6.1/#:~:text=The%20BitAnd%2C%20BitOr%2C%20and%20BitXor%20classes>`__.
+
+.. code-block:: diff
+
+    -from django.contrib.postgres.aggregates import BitAnd, BitOr, BitXor
+    +from django.db.models import BitAnd, BitOr, BitXor
+
+.. _transaction_savepoint:
+
+``transaction.savepoint()`` rename
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``transaction_savepoint``
+
+Renames the deprecated ``savepoint`` function in ``django.db.transaction`` to ``savepoint_create``, per `this change <https://docs.djangoproject.com/en/6.1/releases/6.1/#:~:text=django.db.transaction.savepoint>`__.
+
+.. code-block:: diff
+
+    -from django.db.transaction import savepoint
+    +from django.db.transaction import savepoint_create
+
+     # or
+    -from django.db import transaction
+    -transaction.savepoint("name")
+    +from django.db import transaction
+    +transaction.savepoint_create("name")
 
 Django 6.0
 ----------
@@ -492,6 +610,8 @@ It then uses ``**`` to extend that with any values in the current module:
     +    },
     +}
 
+.. _test_http_headers:
+
 Test client HTTP headers
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -499,9 +619,9 @@ Test client HTTP headers
 
 Transforms HTTP headers from the old WSGI kwarg format to use the new ``headers`` dictionary, for:
 
-* ``Client`` method like ``self.client.get()``
-* ``Client`` instantiation
-* ``RequestFactory`` instantiation
+* ``Client`` and ``AsyncClient`` method calls like ``self.client.get()`` / ``self.async_client.get()``
+* ``Client`` and ``AsyncClient`` instantiation
+* ``RequestFactory`` and ``AsyncRequestFactory`` instantiation
 
 .. code-block:: diff
 
@@ -554,13 +674,15 @@ Django 4.1
 
 `Release Notes <https://docs.djangoproject.com/en/4.1/releases/4.1/>`__
 
+.. _utils_timezone:
+
 ``django.utils.timezone.utc`` deprecations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Name:** ``utils_timezone``
 
 Rewrites imports of ``django.utils.timezone.utc`` to use ``datetime.timezone.utc``.
-Requires an existing import of the ``datetime`` module.
+Uses an existing ``import datetime`` statement if present, otherwise inserts ``import datetime as dt`` if the name ``dt`` is unused in the module.
 
 .. code-block:: diff
 
@@ -578,6 +700,15 @@ Requires an existing import of the ``datetime`` module.
 
     -do_a_thing(timezone.utc)
     +do_a_thing(dt.timezone.utc)
+
+.. code-block:: diff
+
+    +import datetime as dt
+     from datetime import datetime
+     from django.utils import timezone
+
+    -do_a_thing(datetime.now(tz=timezone.utc))
+    +do_a_thing(datetime.now(tz=dt.timezone.utc))
 
 ``assertFormError()`` and ``assertFormsetError()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -771,6 +902,8 @@ This only applies in command files, which are heuristically detected as files wi
     -    requires_system_checks = False
     +    requires_system_checks = []
 
+.. _email_validator:
+
 ``EmailValidator``
 ~~~~~~~~~~~~~~~~~~
 
@@ -829,6 +962,8 @@ For example ``myproject/settings.py`` or ``myproject/settings/production.py``.
 
     -PASSWORD_RESET_TIMEOUT_DAYS = 4
     +PASSWORD_RESET_TIMEOUT = 60 * 60 * 24 * 4
+
+.. _signal_providing_args:
 
 ``Signal``
 ~~~~~~~~~~
@@ -1002,6 +1137,7 @@ Rewrites deprecated alias ``django.core.paginator.QuerySetPaginator`` to ``Pagin
     -QuerySetPaginator(...)
     +Paginator(...)
 
+.. _timezone_fixedoffset:
 
 ``FixedOffset``
 ~~~~~~~~~~~~~~~
@@ -1130,6 +1266,26 @@ Thus, you should test affected paths after this fixer makes any changes.
 Note that ``[\w-]`` is sometimes used for slugs, but is not converted because it might be incompatible.
 That pattern matches all Unicode word characters, such as “α”, unlike Django's ``slug`` converter, which only matches Latin characters.
 
+.. _render_to_response:
+
+``render_to_response()``
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``render_to_response``
+
+Rewrites deprecated ``django.shortcuts.render_to_response()`` to ``render()``, adding ``request`` as the first argument.
+
+Only applied when every call in the file is inside a function whose first argument is named ``request``, and there are no ``*args`` or ``**kwargs`` splats in the call.
+
+.. code-block:: diff
+
+    -from django.shortcuts import render_to_response
+    +from django.shortcuts import render
+
+     def my_view(request):
+    -    return render_to_response("index.html", {"key": "value"})
+    +    return render(request, "index.html", {"key": "value"})
+
 Compatibility imports
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -1178,6 +1334,27 @@ Django 1.11
 -----------
 
 `Release Notes <https://docs.djangoproject.com/en/1.11/releases/1.11/>`__
+
+.. _permalink:
+
+``models.permalink`` decorator
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Name:** ``permalink``
+
+Rewrites uses of the ``@models.permalink`` decorator to use :func:`django.urls.reverse` directly.
+
+.. code-block:: diff
+
+     from django.db import models
+    +from django.urls import reverse
+
+
+     class MyModel(models.Model):
+    -    @models.permalink
+         def get_absolute_url(self):
+    -        return ("guitarist_detail", [self.slug])
+    +        return reverse("guitarist_detail", args=[self.slug])
 
 Compatibility imports
 ~~~~~~~~~~~~~~~~~~~~~
@@ -1245,6 +1422,8 @@ Django 1.9
 -----------
 
 `Release Notes <https://docs.djangoproject.com/en/stable/releases/1.9/>`__
+
+.. _on_delete:
 
 ``on_delete`` argument
 ~~~~~~~~~~~~~~~~~~~~~~

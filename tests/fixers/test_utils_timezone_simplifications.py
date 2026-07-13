@@ -32,13 +32,22 @@ def test_noop_full_datetime_import():
     )
 
 
-def test_noop_multiple_args():
-    check_noop(
+def test_multiple_args_rewrites_utc():
+    # utils_timezone_simplifications leaves the multi-arg calls alone, but
+    # utils_timezone still rewrites the deprecated timezone.utc reference.
+    check_transformed(
         """\
         from django.utils import timezone
 
         timezone.localtime(timezone.now(), timezone.utc)
         timezone.localdate(timezone.now(), timezone.utc)
+        """,
+        """\
+        import datetime as dt
+        from django.utils import timezone
+
+        timezone.localtime(timezone.now(), dt.timezone.utc)
+        timezone.localdate(timezone.now(), dt.timezone.utc)
         """,
         settings,
     )
@@ -139,9 +148,10 @@ def test_transform_unnecessary_localtime_default_with_tz():
         timezone.localtime(timezone.now(), timezone=timezone.utc)
         """,
         """\
+        import datetime as dt
         from django.utils import timezone
 
-        timezone.localtime(timezone=timezone.utc)
+        timezone.localtime(timezone=dt.timezone.utc)
         """,
         settings,
     )
@@ -171,9 +181,10 @@ def test_transform_unnecessary_localdate_default_with_tz():
         timezone.localdate(timezone.now(), timezone=timezone.utc)
         """,
         """\
+        import datetime as dt
         from django.utils import timezone
 
-        timezone.localdate(timezone=timezone.utc)
+        timezone.localdate(timezone=dt.timezone.utc)
         """,
         settings,
     )
@@ -261,11 +272,12 @@ def test_transform_overcomplicated_localtime_datetime_with_timezone():
         timezone.make_aware(datetime.now(), timezone=timezone.utc)
         """,
         """\
+        import datetime as dt
         from django.utils import timezone
         from datetime import datetime
 
-        timezone.localtime(timezone.utc)
-        timezone.localtime(timezone=timezone.utc)
+        timezone.localtime(dt.timezone.utc)
+        timezone.localtime(timezone=dt.timezone.utc)
         """,
         settings,
     )
